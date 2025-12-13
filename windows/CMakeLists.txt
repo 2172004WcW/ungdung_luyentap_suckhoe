@@ -1,10 +1,10 @@
 # Project-level configuration.
 cmake_minimum_required(VERSION 3.14)
-project(appsuckhoe_dack LANGUAGES CXX)
+project(ungdungluyentap_suckhoe LANGUAGES CXX)
 
 # The name of the executable created for the application. Change this to change
 # the on-disk name of your application.
-set(BINARY_NAME "appsuckhoe_dack")
+set(BINARY_NAME "ungdungluyentap_suckhoe")
 
 # Explicitly opt in to modern CMake behaviors to avoid warnings with recent
 # versions of CMake.

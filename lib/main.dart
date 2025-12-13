@@ -1,6 +1,5 @@
-// lib/main.dart
 import 'package:flutter/material.dart';
-import 'screens/onboarding_screen.dart'; // Import màn hình bắt đầu
+import 'screens/handbook_screen.dart';
 
 void main() {
   runApp(const MyApp());
@@ -12,14 +11,26 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      title: 'HAT Fitness App',
+      title: 'Health & Nutrition App',
       theme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         useMaterial3: true,
-        scaffoldBackgroundColor: Colors.white,
       ),
-      // Màn hình bắt đầu là Onboarding
-      home: const OnboardingScreen(),
+      home: const MainNavigationScreen(),
     );
+  }
+}
+
+class MainNavigationScreen extends StatefulWidget {
+  const MainNavigationScreen({Key? key}) : super(key: key);
+
+  @override
+  State<MainNavigationScreen> createState() => _MainNavigationScreenState();
+}
+
+class _MainNavigationScreenState extends State<MainNavigationScreen> {
+  @override
+  Widget build(BuildContext context) {
+    return const HandbookScreen();
   }
 }

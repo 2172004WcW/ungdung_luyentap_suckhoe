@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import '../models/user_profile.dart';
 import 'profile_screen.dart'; // Import màn hình hồ sơ
+import 'handbook_screen.dart'; // Import màn hình sổ tay
 
 class HomeScreen extends StatefulWidget {
   final UserProfile userProfile;
@@ -13,7 +14,7 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  int _selectedIndex = 0; // 0: Trang chủ, 1: Tập luyện, 2: Hồ sơ
+  int _selectedIndex = 0; // 0: Trang chủ, 1: Sổ tay, 2: Tập luyện, 3: Hồ sơ
   late UserProfile _currentProfile;
 
   @override
@@ -36,11 +37,14 @@ class _HomeScreenState extends State<HomeScreen> {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Text(
-            'Xin chào, ${_currentProfile.name}!', 
+            'Xin chào, ${_currentProfile.name}!',
             style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 10),
-          const Text('Mục tiêu hiện tại:', style: TextStyle(fontSize: 16, color: Colors.grey)),
+          const Text(
+            'Mục tiêu hiện tại:',
+            style: TextStyle(fontSize: 16, color: Colors.grey),
+          ),
           Text(
             _currentProfile.goal.toUpperCase(),
             style: const TextStyle(
@@ -64,11 +68,14 @@ class _HomeScreenState extends State<HomeScreen> {
                 const SizedBox(width: 10),
                 Text(
                   'Cân nặng: ${_currentProfile.weight} kg',
-                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w500),
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
               ],
             ),
-          )
+          ),
         ],
       ),
     );
@@ -79,8 +86,10 @@ class _HomeScreenState extends State<HomeScreen> {
     // Danh sách các màn hình
     final List<Widget> pages = [
       _buildHomeTab(), // Tab 0
-      const Center(child: Text('Màn hình Bài tập (Đang phát triển)')), // Tab 1
-      ProfileScreen( // Tab 2
+      const HandbookScreen(), // Tab 1: Sổ tay
+      const Center(child: Text('Màn hình Bài tập (Đang phát triển)')), // Tab 2
+      ProfileScreen(
+        // Tab 3
         userProfile: _currentProfile,
         onProfileChanged: _updateProfile,
       ),
@@ -88,10 +97,13 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return Scaffold(
       // Nếu ở tab Home hoặc Tập luyện thì hiện AppBar, tab Profile thì ẩn (vì ProfileScreen đã có AppBar riêng)
-      appBar: _selectedIndex != 2 
-          ? AppBar(title: const Text('Fitness App'), automaticallyImplyLeading: false)
+      appBar: _selectedIndex != 3
+          ? AppBar(
+              title: const Text('Fitness App'),
+              automaticallyImplyLeading: false,
+            )
           : null,
-      
+
       body: pages[_selectedIndex], // Hiển thị nội dung theo tab đang chọn
 
       bottomNavigationBar: NavigationBar(
@@ -106,6 +118,11 @@ class _HomeScreenState extends State<HomeScreen> {
             icon: Icon(Icons.home_outlined),
             selectedIcon: Icon(Icons.home),
             label: 'Trang chủ',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.book_outlined),
+            selectedIcon: Icon(Icons.book),
+            label: 'Sổ tay',
           ),
           NavigationDestination(
             icon: Icon(Icons.fitness_center_outlined),
