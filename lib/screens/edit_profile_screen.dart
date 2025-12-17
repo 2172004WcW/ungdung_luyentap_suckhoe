@@ -1,7 +1,8 @@
 // lib/screens/edit_profile_screen.dart
-import 'dart:io'; // Cần thêm thư viện này để xử lý File
+import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart'; // Import image_picker
+import 'package:image_picker/image_picker.dart';
+import 'package:cloud_firestore/cloud_firestore.dart'; // Thêm Firestore
 import '../models/user_profile.dart';
 
 class EditProfileScreen extends StatefulWidget {
@@ -36,25 +37,22 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     _goal = widget.userProfile.goal;
   }
 
-  // --- HÀM MỞ THƯ VIỆN ẢNH ---
   Future<void> _pickImage() async {
     final ImagePicker picker = ImagePicker();
-    // Mở thư viện ảnh (gallery)
     final XFile? image = await picker.pickImage(source: ImageSource.gallery);
 
     if (image != null) {
       setState(() {
-        _avatar = image.path; // Lưu đường dẫn file ảnh trên điện thoại
+        _avatar = image.path;
       });
     }
   }
 
-  // Hàm kiểm tra xem nên hiển thị ảnh từ Assets hay từ File
   ImageProvider _getAvatarImage(String path) {
     if (path.contains('assets/')) {
-      return AssetImage(path); // Ảnh mặc định ban đầu
+      return AssetImage(path);
     } else {
-      return FileImage(File(path)); // Ảnh chọn từ điện thoại
+      return FileImage(File(path));
     }
   }
 
@@ -67,9 +65,12 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     super.dispose();
   }
 
-  void _saveProfile() {
+  // CẬP NHẬT HÀM LƯU DỮ LIỆU LÊN FIREBASE
+  Future<void> _saveProfile() async {
     if (_formKey.currentState!.validate()) {
+      // 1. Tạo đối tượng đã cập nhật (Bổ sung tham số id ở đây để hết lỗi)
       final updatedProfile = UserProfile(
+        id: widget.userProfile.id, // SỬA LỖI: Thêm ID từ profile cũ
         name: _nameController.text,
         avatar: _avatar,
         gender: _gender,
@@ -77,12 +78,44 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         weight: double.tryParse(_weightController.text) ?? widget.userProfile.weight,
         height: double.tryParse(_heightController.text) ?? widget.userProfile.height,
         goal: _goal,
+        location: widget.userProfile.location, // Giữ nguyên các giá trị cũ
+        workoutPlan: widget.userProfile.workoutPlan,
       );
 
-      Navigator.pop(context, updatedProfile);
+      try {
+        // Hiển thị vòng xoay chờ
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) => const Center(child: CircularProgressIndicator()),
+        );
+
+        // 2. Lưu lên Firestore (Sử dụng hàm toMap đã tạo ở UserProfile)
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(updatedProfile.id)
+            .set(updatedProfile.toMap(), SetOptions(merge: true));
+
+        // Tắt vòng xoay chờ
+        if (!mounted) return;
+        Navigator.pop(context); 
+
+        // 3. Quay lại và trả về profile mới để UI cập nhật
+        Navigator.pop(context, updatedProfile);
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Cập nhật thành công!')),
+        );
+      } catch (e) {
+        Navigator.pop(context); // Tắt vòng xoay
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Lỗi khi lưu dữ liệu: $e')),
+        );
+      }
     }
   }
 
+  // --- UI giữ nguyên như code của bạn ---
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -94,15 +127,14 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // --- PHẦN ẢNH ĐẠI DIỆN ---
               Center(
                 child: GestureDetector(
-                  onTap: _pickImage, // Bấm vào ảnh để mở thư viện
+                  onTap: _pickImage,
                   child: Stack(
                     children: [
                       CircleAvatar(
                         radius: 60,
-                        backgroundImage: _getAvatarImage(_avatar), // Dùng hàm helper
+                        backgroundImage: _getAvatarImage(_avatar),
                       ),
                       Positioned(
                         bottom: 0,
@@ -123,8 +155,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               const SizedBox(height: 10),
               const Center(child: Text('Chạm để đổi ảnh', style: TextStyle(color: Colors.grey))),
               const SizedBox(height: 30),
-
-              // --- FORM NHẬP LIỆU (Giữ nguyên) ---
               TextFormField(
                 controller: _nameController,
                 decoration: const InputDecoration(labelText: 'Tên hiển thị', border: OutlineInputBorder()),
@@ -163,7 +193,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 onChanged: (val) => setState(() => _goal = val!),
               ),
               const SizedBox(height: 30),
-
               SizedBox(
                 width: double.infinity,
                 height: 50,

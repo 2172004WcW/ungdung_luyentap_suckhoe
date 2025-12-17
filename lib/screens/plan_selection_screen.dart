@@ -1,14 +1,15 @@
 // lib/screens/plan_selection_screen.dart
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart'; // THÊM: Để dùng Firebase
 import '../models/user_profile.dart';
+import '../services/storage_service.dart'; // THÊM: Để lưu bộ nhớ máy
 import 'home_screen.dart';
 
 class PlanSelectionScreen extends StatelessWidget {
-  final UserProfile tempProfile; // Profile chứa thông tin từ bước trước
+  final UserProfile tempProfile;
 
   PlanSelectionScreen({super.key, required this.tempProfile});
 
-  // Danh sách 10 kế hoạch mẫu
   final List<Map<String, String>> plans = [
     {'title': 'Giảm mỡ toàn thân', 'desc': 'Đốt cháy calo tối đa với các bài cardio cường độ cao.', 'goal': 'Giảm cân'},
     {'title': 'Tăng cơ bắp cơ bản', 'desc': 'Xây dựng nền tảng cơ bắp vững chắc cho người mới.', 'goal': 'Tăng cơ'},
@@ -21,6 +22,50 @@ class PlanSelectionScreen extends StatelessWidget {
     {'title': 'Giãn cơ phục hồi', 'desc': 'Nhẹ nhàng, giúp cơ thể phục hồi sau chấn thương.', 'goal': 'Duy trì vóc dáng'},
     {'title': 'Thử thách 30 ngày', 'desc': 'Lịch trình nghiêm ngặt để thay đổi bản thân trong 1 tháng.', 'goal': 'Giảm cân'},
   ];
+
+  // HÀM XỬ LÝ LƯU DỮ LIỆU
+  Future<void> _handlePlanSelection(BuildContext context, Map<String, String> plan) async {
+    // 1. Cập nhật nốt thông tin vào Profile
+    tempProfile.goal = plan['goal']!;
+    tempProfile.workoutPlan = plan['title']!;
+
+    try {
+      // Hiển thị vòng xoay chờ (loading)
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(child: CircularProgressIndicator(color: Color(0xFF1AB7B0))),
+      );
+
+      // 2. LƯU LÊN FIREBASE CLOUD FIRESTORE
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(tempProfile.id) // Dùng ID đã tạo từ bước trước
+          .set(tempProfile.toMap());
+
+      // 3. LƯU VÀO BỘ NHỚ MÁY (LOCAL STORAGE)
+      await StorageService.saveProfile(tempProfile);
+
+      // Tắt loading
+      if (!context.mounted) return;
+      Navigator.pop(context);
+
+      // 4. CHUYỂN VÀO MÀN HÌNH CHÍNH
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(
+          builder: (_) => HomeScreen(userProfile: tempProfile),
+        ),
+        (route) => false,
+      );
+    } catch (e) {
+      // Tắt loading nếu lỗi
+      Navigator.pop(context);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Lỗi khi lưu dữ liệu: $e')),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -47,25 +92,11 @@ class PlanSelectionScreen extends StatelessWidget {
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   child: InkWell(
                     borderRadius: BorderRadius.circular(12),
-                    onTap: () {
-                      // Cập nhật nốt thông tin Goal và Plan vào Profile
-                      tempProfile.goal = plan['goal']!;
-                      tempProfile.workoutPlan = plan['title']!;
-
-                      // Chuyển vào màn hình chính
-                      Navigator.pushAndRemoveUntil(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => HomeScreen(userProfile: tempProfile),
-                        ),
-                        (route) => false, // Xóa hết lịch sử back để không quay lại được
-                      );
-                    },
+                    onTap: () => _handlePlanSelection(context, plan), // Gọi hàm xử lý lưu
                     child: Padding(
                       padding: const EdgeInsets.all(16.0),
                       child: Row(
                         children: [
-                          // Số thứ tự hoặc Icon
                           Container(
                             width: 50,
                             height: 50,
@@ -85,17 +116,13 @@ class PlanSelectionScreen extends StatelessWidget {
                             ),
                           ),
                           const SizedBox(width: 16),
-                          // Nội dung kế hoạch
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
                                   plan['title']!,
-                                  style: const TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                  ),
+                                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                                 ),
                                 const SizedBox(height: 4),
                                 Text(

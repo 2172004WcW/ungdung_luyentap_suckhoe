@@ -1,5 +1,6 @@
 // lib/screens/user_info_screen.dart
 import 'package:flutter/material.dart';
+import 'package:uuid/uuid.dart'; // Thư viện tạo ID duy nhất
 import '../models/user_profile.dart';
 import 'plan_selection_screen.dart'; 
 
@@ -15,7 +16,7 @@ class _UserInfoScreenState extends State<UserInfoScreen> {
   
   String _gender = 'Nam';
   double _age = 20;
-  double _weight = 60.0; // Để dạng double
+  double _weight = 60.0; 
   double _height = 170.0;
   String _location = 'Tại nhà'; 
 
@@ -26,14 +27,19 @@ class _UserInfoScreenState extends State<UserInfoScreen> {
   }
 
   void _onNext() {
+    // TẠO ID DUY NHẤT: Bước này cực kỳ quan trọng để Firebase phân biệt các người dùng
+    var uuid = const Uuid();
+    final String newId = uuid.v4();
+
     final incompleteProfile = UserProfile(
+      id: newId, // ĐÃ THÊM: Giải quyết lỗi missing_required_argument
       name: _nameController.text.isEmpty ? 'Người dùng' : _nameController.text,
       gender: _gender,
-      age: _age.round(), // Tuổi làm tròn thành số nguyên
-      // MỚI: Lưu cân nặng và chiều cao chính xác 1 số lẻ
+      age: _age.round(),
       weight: double.parse(_weight.toStringAsFixed(1)), 
       height: double.parse(_height.toStringAsFixed(1)),
       location: _location,
+      // Các trường còn lại sẽ lấy giá trị mặc định từ Constructor của UserProfile
     );
 
     Navigator.push(
@@ -49,13 +55,17 @@ class _UserInfoScreenState extends State<UserInfoScreen> {
     const tealColor = Color(0xFF1AB7B0);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Thiết lập hồ sơ')),
+      appBar: AppBar(
+        title: const Text('Thiết lập hồ sơ'),
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.black,
+        elevation: 0,
+      ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 1. NHẬP TÊN
             const Text('Tên hiển thị', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
             const SizedBox(height: 8),
             TextField(
@@ -63,19 +73,18 @@ class _UserInfoScreenState extends State<UserInfoScreen> {
               decoration: const InputDecoration(
                 hintText: 'Nhập tên của bạn',
                 border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.person),
+                prefixIcon: Icon(Icons.person, color: tealColor),
               ),
             ),
             const SizedBox(height: 24),
 
-            // 2. GIỚI TÍNH
             const Text('Giới tính', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
             const SizedBox(height: 8),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12),
               decoration: BoxDecoration(
-                border: Border.all(color: Colors.grey),
-                borderRadius: BorderRadius.circular(4),
+                border: Border.all(color: Colors.grey.shade300),
+                borderRadius: BorderRadius.circular(8),
               ),
               child: DropdownButtonHideUnderline(
                 child: DropdownButton<String>(
@@ -88,56 +97,47 @@ class _UserInfoScreenState extends State<UserInfoScreen> {
                       child: Text(value, style: const TextStyle(fontSize: 16)),
                     );
                   }).toList(),
-                  onChanged: (newValue) {
-                    setState(() {
-                      _gender = newValue!;
-                    });
-                  },
+                  onChanged: (newValue) => setState(() => _gender = newValue!),
                 ),
               ),
             ),
             const SizedBox(height: 30),
 
-            // 3. THÔNG SỐ CƠ THỂ
             const Text('Thông số cơ thể', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
             const SizedBox(height: 10),
             
-            // Slider Tuổi (Số nguyên => decimals: 0)
             _buildSliderGroup(
               label: 'Tuổi',
               value: _age,
               min: 10,
               max: 80,
               unit: 'tuổi',
-              decimals: 0, // Không lấy số lẻ
+              decimals: 0,
               onChanged: (val) => setState(() => _age = val),
             ),
             
-            // Slider Chiều cao (Lấy 1 số lẻ => decimals: 1)
             _buildSliderGroup(
               label: 'Chiều cao',
               value: _height,
               min: 100,
               max: 220,
               unit: 'cm',
-              decimals: 1, // MỚI: Lấy 1 số lẻ
+              decimals: 1,
               onChanged: (val) => setState(() => _height = val),
             ),
 
-            // Slider Cân nặng (Lấy 1 số lẻ => decimals: 1)
             _buildSliderGroup(
               label: 'Cân nặng',
               value: _weight,
               min: 30,
               max: 150,
               unit: 'kg',
-              decimals: 1, // MỚI: Lấy 1 số lẻ
+              decimals: 1,
               onChanged: (val) => setState(() => _weight = val),
             ),
 
             const SizedBox(height: 20),
 
-            // 4. NƠI TẬP LUYỆN
             const Text('Nơi tập luyện', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
             const SizedBox(height: 10),
             Row(
@@ -150,14 +150,16 @@ class _UserInfoScreenState extends State<UserInfoScreen> {
 
             const SizedBox(height: 40),
 
-            // NÚT TIẾP TỤC
             SizedBox(
               width: double.infinity,
-              height: 50,
+              height: 55,
               child: FilledButton(
                 onPressed: _onNext,
-                style: FilledButton.styleFrom(backgroundColor: tealColor),
-                child: const Text('TIẾP TỤC: CHỌN KẾ HOẠCH', style: TextStyle(fontSize: 16)),
+                style: FilledButton.styleFrom(
+                  backgroundColor: tealColor,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                child: const Text('TIẾP TỤC: CHỌN KẾ HOẠCH', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
               ),
             ),
           ],
@@ -166,7 +168,6 @@ class _UserInfoScreenState extends State<UserInfoScreen> {
     );
   }
 
-  // Widget con: Thanh trượt
   Widget _buildSliderGroup({
     required String label,
     required double value,
@@ -174,7 +175,7 @@ class _UserInfoScreenState extends State<UserInfoScreen> {
     required double max,
     required String unit,
     required Function(double) onChanged,
-    int decimals = 0, // MỚI: Tham số quyết định số lượng số lẻ
+    int decimals = 0,
   }) {
     const tealColor = Color(0xFF1AB7B0);
     return Column(
@@ -184,7 +185,6 @@ class _UserInfoScreenState extends State<UserInfoScreen> {
           children: [
             Text(label, style: const TextStyle(fontSize: 16, color: Colors.black54)),
             Text(
-              // MỚI: toStringAsFixed để hiển thị đúng số lượng số lẻ mong muốn
               '${value.toStringAsFixed(decimals)} $unit',
               style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: tealColor),
             ),
@@ -194,10 +194,9 @@ class _UserInfoScreenState extends State<UserInfoScreen> {
           value: value,
           min: min,
           max: max,
-          // MỚI: Chia nhỏ slider nếu là số thập phân để kéo mượt hơn
-          divisions: (max - min).toInt() * (decimals == 0 ? 1 : 10), 
+          divisions: decimals == 0 ? (max - min).toInt() : ((max - min) * 10).toInt(),
           activeColor: tealColor,
-          inactiveColor: tealColor.withOpacity(0.2),
+          inactiveColor: tealColor.withOpacity(0.1),
           onChanged: onChanged,
         ),
         const SizedBox(height: 10),
@@ -213,20 +212,20 @@ class _UserInfoScreenState extends State<UserInfoScreen> {
       child: GestureDetector(
         onTap: () => setState(() => _location = label),
         child: Container(
-          height: 80,
+          height: 90,
           decoration: BoxDecoration(
-            color: isSelected ? tealColor.withOpacity(0.1) : Colors.white,
+            color: isSelected ? tealColor.withOpacity(0.05) : Colors.white,
             border: Border.all(
-              color: isSelected ? tealColor : Colors.grey.shade300,
+              color: isSelected ? tealColor : Colors.grey.shade200,
               width: 2,
             ),
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(16),
           ),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(icon, color: isSelected ? tealColor : Colors.grey),
-              const SizedBox(height: 5),
+              Icon(icon, color: isSelected ? tealColor : Colors.grey, size: 28),
+              const SizedBox(height: 8),
               Text(
                 label,
                 style: TextStyle(

@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "464773386660",
+    "project_id": "quanly-suckhoe-tapluyen",
+    "storage_bucket": "quanly-suckhoe-tapluyen.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:464773386660:android:0ba00f09fd7368fa343131",
+        "android_client_info": {
+          "package_name": "com.example.ungdungluyentap_suckhoe"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAe3-gD49wDRPWn4qN2iK66Tfjek3pxzAc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
