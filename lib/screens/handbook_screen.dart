@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/handbook_topic.dart';
 import 'handbook_detail_screen.dart';
+import '../services/handbook_firestore_service.dart';
 
 class HandbookScreen extends StatefulWidget {
   const HandbookScreen({Key? key}) : super(key: key);
@@ -27,17 +28,24 @@ class _HandbookScreenState extends State<HandbookScreen> {
         foregroundColor: Colors.white,
         centerTitle: true,
       ),
-      body: GridView.builder(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 1,
-          mainAxisSpacing: 16,
-          childAspectRatio: 2.2, // Tăng nhẹ chiều cao để không bị ép chữ
-        ),
-        itemCount: HandbookData.topics.length,
-        itemBuilder: (context, index) {
-          final topic = HandbookData.topics[index];
-          return _buildTopicCard(context, topic);
+      body: StreamBuilder<List<HandbookTopic>>(
+        stream: HandbookFirestoreService().topicsStream(),
+        builder: (context, snapshot) {
+          // Rely on Firestore data only. Show nothing if stream is empty/null.
+          final topics = snapshot.data ?? <HandbookTopic>[];
+          return GridView.builder(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 1,
+              mainAxisSpacing: 16,
+              childAspectRatio: 2.2,
+            ),
+            itemCount: topics.length,
+            itemBuilder: (context, index) {
+              final topic = topics[index];
+              return _buildTopicCard(context, topic);
+            },
+          );
         },
       ),
     );
@@ -63,7 +71,10 @@ class _HandbookScreenState extends State<HandbookScreen> {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => HandbookDetailScreen(topic: topic),
+                  builder: (context) => HandbookDetailScreen(
+                    topicId: topic.id,
+                    initialTopic: topic,
+                  ),
                 ),
               );
             },

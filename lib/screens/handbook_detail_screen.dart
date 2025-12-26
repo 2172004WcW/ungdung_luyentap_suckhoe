@@ -3,13 +3,18 @@ import '../models/handbook_topic.dart';
 import '../models/thuc_pham.dart';
 import '../widgets/thuc_pham_card.dart';
 import 'exercise_list_screen.dart';
-import 'exercise_detail_screen.dart';
 import 'ThucPham_List_Screen.dart';
 import 'specific_content_screen.dart';
+import '../services/handbook_firestore_service.dart';
 
 class HandbookDetailScreen extends StatefulWidget {
-  final HandbookTopic topic;
-  const HandbookDetailScreen({Key? key, required this.topic}) : super(key: key);
+  final String topicId;
+  final HandbookTopic? initialTopic; // fallback
+  const HandbookDetailScreen({
+    Key? key,
+    required this.topicId,
+    this.initialTopic,
+  }) : super(key: key);
 
   @override
   State<HandbookDetailScreen> createState() => _HandbookDetailScreenState();
@@ -19,6 +24,7 @@ class _HandbookDetailScreenState extends State<HandbookDetailScreen> {
   late TextEditingController searchController;
   late List<ContentSection> filteredSections;
   late List<ThucPham> filteredFoods;
+  HandbookTopic? currentTopic;
 
   static const Color primaryColor = Color(0xFF1AB7B0);
 
@@ -26,8 +32,9 @@ class _HandbookDetailScreenState extends State<HandbookDetailScreen> {
   void initState() {
     super.initState();
     searchController = TextEditingController();
-    filteredSections = widget.topic.sections;
-    filteredFoods = widget.topic.foodList ?? [];
+    currentTopic = widget.initialTopic;
+    filteredSections = currentTopic?.sections ?? [];
+    filteredFoods = currentTopic?.foodList ?? [];
   }
 
   @override
@@ -39,13 +46,13 @@ class _HandbookDetailScreenState extends State<HandbookDetailScreen> {
   void _filterContent(String query) {
     setState(() {
       if (query.isEmpty) {
-        filteredSections = widget.topic.sections;
-        filteredFoods = widget.topic.foodList ?? [];
+        filteredSections = currentTopic?.sections ?? [];
+        filteredFoods = currentTopic?.foodList ?? [];
       } else {
-        filteredSections = widget.topic.sections
+        filteredSections = (currentTopic?.sections ?? [])
             .where((s) => s.title.toLowerCase().contains(query.toLowerCase()))
             .toList();
-        filteredFoods = (widget.topic.foodList ?? [])
+        filteredFoods = (currentTopic?.foodList ?? [])
             .where((f) => f.ten.toLowerCase().contains(query.toLowerCase()))
             .toList();
       }
@@ -58,7 +65,7 @@ class _HandbookDetailScreenState extends State<HandbookDetailScreen> {
       backgroundColor: Colors.white,
       appBar: AppBar(
         title: Text(
-          widget.topic.title,
+          currentTopic?.title ?? widget.initialTopic?.title ?? '',
           style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
         ),
         backgroundColor: primaryColor,
@@ -66,33 +73,43 @@ class _HandbookDetailScreenState extends State<HandbookDetailScreen> {
         elevation: 0,
         centerTitle: true,
       ),
-      body: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: TextField(
-              controller: searchController,
-              cursorColor: primaryColor,
-              decoration: InputDecoration(
-                hintText: 'Tìm kiếm nội dung...',
-                prefixIcon: const Icon(Icons.search, color: Colors.grey),
-                filled: true,
-                fillColor: const Color(0xFFF5F7F9),
-                contentPadding: const EdgeInsets.symmetric(vertical: 0),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(25),
-                  borderSide: BorderSide.none,
+      body: StreamBuilder<HandbookTopic?>(
+        stream: HandbookFirestoreService().topicStream(widget.topicId),
+        builder: (context, snapshot) {
+          // if Firestore provides data, use it; otherwise fall back to initialTopic
+          currentTopic = snapshot.data ?? widget.initialTopic ?? currentTopic;
+          filteredSections = currentTopic?.sections ?? [];
+          filteredFoods = currentTopic?.foodList ?? [];
+
+          return Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: TextField(
+                  controller: searchController,
+                  cursorColor: primaryColor,
+                  decoration: InputDecoration(
+                    hintText: 'Tìm kiếm nội dung...',
+                    prefixIcon: const Icon(Icons.search, color: Colors.grey),
+                    filled: true,
+                    fillColor: const Color(0xFFF5F7F9),
+                    contentPadding: const EdgeInsets.symmetric(vertical: 0),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(25),
+                      borderSide: BorderSide.none,
+                    ),
+                  ),
+                  onChanged: _filterContent,
                 ),
               ),
-              onChanged: _filterContent,
-            ),
-          ),
-          Expanded(
-            child: widget.topic.isFoodList
-                ? _buildFoodList()
-                : _buildContentSections(),
-          ),
-        ],
+              Expanded(
+                child: (currentTopic?.isFoodList ?? false)
+                    ? _buildFoodList()
+                    : _buildContentSections(),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
@@ -103,10 +120,11 @@ class _HandbookDetailScreenState extends State<HandbookDetailScreen> {
     }
 
     // SỬA TẠI ĐÂY: Thêm ID '4' vào danh sách hiển thị kiểu Row (giống Topic 2)
+    final t = currentTopic ?? widget.initialTopic;
+    final id = t?.id;
+    final title = t?.title;
     bool isStyleWithRow =
-        widget.topic.id == '2' ||
-        widget.topic.id == '4' ||
-        widget.topic.title.contains('Dược lý học');
+        (id == '2') || (id == '4') || (title?.contains('Dược lý học') ?? false);
 
     return ListView.builder(
       padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -266,7 +284,7 @@ class _HandbookDetailScreenState extends State<HandbookDetailScreen> {
     // 1. Xử lý trường hợp có danh sách foods (Thực phẩm/Kiến thức)
     if (section.foods != null && section.foods!.isNotEmpty) {
       // KIỂM TRA: Nếu là Topic ID '5' (Bách khoa toàn thư)
-      if (widget.topic.id == '5') {
+      if ((currentTopic?.id ?? widget.initialTopic?.id) == '5') {
         // Bỏ qua màn hình danh sách (Hình 1), bay thẳng vào chi tiết (Hình 2)
         // Lưu ý: Ở đây tôi dùng Navigator để đẩy sang trang mới.
         // Bạn hãy tạo Class 'SpecificContentScreen' như tôi hướng dẫn ở dưới để hết lỗi đỏ.
@@ -274,7 +292,9 @@ class _HandbookDetailScreenState extends State<HandbookDetailScreen> {
           context,
           MaterialPageRoute(
             builder: (context) => SpecificContentScreen(
-              food: section.foods![0], // Lấy nội dung đầu tiên
+              topicId: widget.topicId,
+              thucPhamId: section.foods![0].id,
+              initialFood: section.foods![0],
             ),
           ),
         );
@@ -285,6 +305,7 @@ class _HandbookDetailScreenState extends State<HandbookDetailScreen> {
           MaterialPageRoute(
             builder: (context) => ThucPhamListScreen(
               title: section.title,
+              topicId: widget.topicId,
               items: section.foods!,
               isSupplement: section.isSupplement,
             ),
@@ -299,7 +320,8 @@ class _HandbookDetailScreenState extends State<HandbookDetailScreen> {
         MaterialPageRoute(
           builder: (context) => ExerciseListScreen(
             title: section.title,
-            exercises: section.exercises!,
+            topicId: widget.topicId,
+            initialExercises: section.exercises!,
           ),
         ),
       );

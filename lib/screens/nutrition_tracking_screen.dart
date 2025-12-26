@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/nutrition_log.dart';
-import '../models/thuc_pham.dart';
-import '../models/handbook_topic.dart';
+// Removed unused model imports
 import '../services/storage_service.dart';
 import 'add_meal_screen.dart';
 
@@ -35,7 +34,8 @@ class _NutritionTrackingScreenState extends State<NutritionTrackingScreen> {
             return const Center(child: CircularProgressIndicator());
           }
 
-          final nutrition = snapshot.data ??
+          final nutrition =
+              snapshot.data ??
               DailyNutrition(
                 date: _selectedDate,
                 meals: [],
@@ -74,8 +74,9 @@ class _NutritionTrackingScreenState extends State<NutritionTrackingScreen> {
                           'Protein',
                           '${nutrition.totalProtein.toStringAsFixed(1)}g / ${nutrition.targetProtein ?? 0}g',
                           nutrition.targetProtein != null
-                              ? (nutrition.totalProtein / nutrition.targetProtein!)
-                                  .clamp(0.0, 1.0)
+                              ? (nutrition.totalProtein /
+                                        nutrition.targetProtein!)
+                                    .clamp(0.0, 1.0)
                               : 0,
                           Colors.blue,
                         ),
@@ -90,7 +91,7 @@ class _NutritionTrackingScreenState extends State<NutritionTrackingScreen> {
                           '${nutrition.totalCarbs.toStringAsFixed(1)}g / ${nutrition.targetCarbs ?? 0}g',
                           nutrition.targetCarbs != null
                               ? (nutrition.totalCarbs / nutrition.targetCarbs!)
-                                  .clamp(0.0, 1.0)
+                                    .clamp(0.0, 1.0)
                               : 0,
                           Colors.green,
                         ),
@@ -99,7 +100,7 @@ class _NutritionTrackingScreenState extends State<NutritionTrackingScreen> {
                           '${nutrition.totalFat.toStringAsFixed(1)}g / ${nutrition.targetFat ?? 0}g',
                           nutrition.targetFat != null
                               ? (nutrition.totalFat / nutrition.targetFat!)
-                                  .clamp(0.0, 1.0)
+                                    .clamp(0.0, 1.0)
                               : 0,
                           Colors.purple,
                         ),
@@ -133,9 +134,7 @@ class _NutritionTrackingScreenState extends State<NutritionTrackingScreen> {
               ),
 
               // Danh sách bữa ăn
-              Expanded(
-                child: _buildMealsList(nutrition),
-              ),
+              Expanded(child: _buildMealsList(nutrition)),
             ],
           );
         },
@@ -149,7 +148,12 @@ class _NutritionTrackingScreenState extends State<NutritionTrackingScreen> {
     );
   }
 
-  Widget _buildStatCard(String label, String value, double progress, Color color) {
+  Widget _buildStatCard(
+    String label,
+    String value,
+    double progress,
+    Color color,
+  ) {
     return Expanded(
       child: Container(
         margin: const EdgeInsets.symmetric(horizontal: 4),
@@ -231,9 +235,7 @@ class _NutritionTrackingScreenState extends State<NutritionTrackingScreen> {
             leading: Icon(_getMealIcon(type), color: const Color(0xFF1AB7B0)),
             children: meals.map((meal) {
               return ListTile(
-                title: Text(
-                  meal.items.map((i) => i.food.ten).join(', '),
-                ),
+                title: Text(meal.items.map((i) => i.food.ten).join(', ')),
                 subtitle: Text(
                   '${meal.totalCalories.toStringAsFixed(0)} kcal • '
                   'P: ${meal.totalProtein.toStringAsFixed(1)}g • '

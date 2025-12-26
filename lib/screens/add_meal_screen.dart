@@ -3,6 +3,7 @@ import '../models/nutrition_log.dart';
 import '../models/thuc_pham.dart';
 import '../models/handbook_topic.dart';
 import '../services/storage_service.dart';
+import '../services/handbook_firestore_service.dart';
 
 class AddMealScreen extends StatefulWidget {
   final DateTime date;
@@ -20,9 +21,7 @@ class _AddMealScreenState extends State<AddMealScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Thêm bữa ăn'),
-      ),
+      appBar: AppBar(title: const Text('Thêm bữa ăn')),
       body: Column(
         children: [
           // Chọn loại bữa ăn
@@ -49,8 +48,11 @@ class _AddMealScreenState extends State<AddMealScreen> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const Icon(Icons.restaurant_menu,
-                            size: 64, color: Colors.grey),
+                        const Icon(
+                          Icons.restaurant_menu,
+                          size: 64,
+                          color: Colors.grey,
+                        ),
                         const SizedBox(height: 16),
                         const Text(
                           'Chưa có món ăn nào',
@@ -90,7 +92,10 @@ class _AddMealScreenState extends State<AddMealScreen> {
                                 onPressed: () => _editItem(index),
                               ),
                               IconButton(
-                                icon: const Icon(Icons.delete, color: Colors.red),
+                                icon: const Icon(
+                                  Icons.delete,
+                                  color: Colors.red,
+                                ),
                                 onPressed: () {
                                   setState(() => _items.removeAt(index));
                                 },
@@ -158,7 +163,10 @@ class _AddMealScreenState extends State<AddMealScreen> {
                     ),
                     child: const Text(
                       'Lưu bữa ăn',
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
                 ),
@@ -170,11 +178,19 @@ class _AddMealScreenState extends State<AddMealScreen> {
     );
   }
 
-  void _addFood() {
-    // Lấy danh sách thực phẩm từ handbook
-    final foodTopic = HandbookData.topics.firstWhere(
+  Future<void> _addFood() async {
+    // Fetch handbook topics from Firestore and find the food list topic
+    final topics = await HandbookFirestoreService().fetchAllTopics();
+    final foodTopic = topics.firstWhere(
       (t) => t.isFoodList,
-      orElse: () => HandbookData.topics.first,
+      orElse: () => HandbookTopic(
+        id: '',
+        title: 'Thực phẩm',
+        description: '',
+        imageUrl: '',
+        sections: [],
+        foodList: [],
+      ),
     );
     final foods = foodTopic.foodList ?? [];
 
@@ -184,21 +200,23 @@ class _AddMealScreenState extends State<AddMealScreen> {
         title: const Text('Chọn thực phẩm'),
         content: SizedBox(
           width: double.maxFinite,
-          child: ListView.builder(
-            shrinkWrap: true,
-            itemCount: foods.length,
-            itemBuilder: (context, index) {
-              final food = foods[index];
-              return ListTile(
-                title: Text(food.ten),
-                subtitle: Text('${food.calorie} kcal/100g'),
-                onTap: () {
-                  Navigator.pop(context);
-                  _addFoodWithQuantity(food);
-                },
-              );
-            },
-          ),
+          child: foods.isEmpty
+              ? const Center(child: Text('Không có thực phẩm trong sổ tay.'))
+              : ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: foods.length,
+                  itemBuilder: (context, index) {
+                    final food = foods[index];
+                    return ListTile(
+                      title: Text(food.ten),
+                      subtitle: Text('${food.calorie} kcal/100g'),
+                      onTap: () {
+                        Navigator.pop(context);
+                        _addFoodWithQuantity(food);
+                      },
+                    );
+                  },
+                ),
         ),
       ),
     );
@@ -241,8 +259,9 @@ class _AddMealScreenState extends State<AddMealScreen> {
 
   void _editItem(int index) {
     final item = _items[index];
-    final quantityController =
-        TextEditingController(text: item.quantity.toStringAsFixed(0));
+    final quantityController = TextEditingController(
+      text: item.quantity.toStringAsFixed(0),
+    );
 
     showDialog(
       context: context,
@@ -250,9 +269,7 @@ class _AddMealScreenState extends State<AddMealScreen> {
         title: Text('Chỉnh sửa ${item.food.ten}'),
         content: TextField(
           controller: quantityController,
-          decoration: const InputDecoration(
-            labelText: 'Số lượng (gram)',
-          ),
+          decoration: const InputDecoration(labelText: 'Số lượng (gram)'),
           keyboardType: TextInputType.number,
         ),
         actions: [
@@ -325,4 +342,3 @@ class _AddMealScreenState extends State<AddMealScreen> {
     }
   }
 }
-

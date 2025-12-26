@@ -12,9 +12,7 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // 🔥 BẮT BUỘC: khởi tạo Firebase (fix lỗi FirebaseException trên Web)
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
   // Khởi tạo notification
   await NotificationService.initialize();
@@ -23,7 +21,7 @@ Future<void> main() async {
   if (!kIsWeb) {
     await HealthService.startStepTracking();
   }
-await initializeDateFormatting('vi');
+  await initializeDateFormatting('vi');
 
   runApp(const MyApp());
 }

@@ -33,9 +33,9 @@ class ThucPhamCard extends StatelessWidget {
               // --- HÌNH ẢNH ---
               ClipRRect(
                 borderRadius: BorderRadius.circular(12),
-                child: thucPham.hinhAnh != null && thucPham.hinhAnh!.isNotEmpty
+                child: thucPham.hinhAnh.isNotEmpty
                     ? Image.asset(
-                        thucPham.hinhAnh!,
+                        thucPham.hinhAnh,
                         width: 80, // Giảm nhẹ kích thước để cân đối hơn
                         height: 80,
                         fit: BoxFit.contain,
@@ -67,20 +67,19 @@ class ThucPhamCard extends StatelessWidget {
                     if (showNutrition) ...[
                       const SizedBox(height: 4),
                       Text(
-                        thucPham.theLoai ??
-                            'Đang cập nhật', // Xử lý null safety
+                        thucPham.theLoai,
                         style: TextStyle(fontSize: 13, color: Colors.grey[600]),
                       ),
                       const SizedBox(height: 8),
                       Row(
                         children: [
                           _buildTag(
-                            'Cal: ${(thucPham.calorie ?? 0).toStringAsFixed(0)}',
+                            'Cal: ${thucPham.calorie.toStringAsFixed(0)}',
                             primaryColor,
                           ),
                           const SizedBox(width: 8),
                           _buildTag(
-                            'Pro: ${(thucPham.protein ?? 0).toStringAsFixed(1)}g',
+                            'Pro: ${thucPham.protein.toStringAsFixed(1)}g',
                             const Color(0xFF0D8C87),
                           ),
                         ],
