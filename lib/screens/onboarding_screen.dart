@@ -1,6 +1,8 @@
 // lib/screens/onboarding_screen.dart
 import 'package:flutter/material.dart';
 import 'user_info_screen.dart'; // Import để chuyển sang màn hình nhập tin
+import 'package:shared_preferences/shared_preferences.dart';
+import 'login_screen.dart';
 
 class OnboardingPageData {
   final String imageAsset;
@@ -58,13 +60,21 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     );
   }
 
-  void _nextOrFinish() {
+  void _nextOrFinish() async {
     if (isLast) {
-      // Chuyển sang màn hình nhập thông tin
+      // 1. Lưu lại trạng thái đã xem Onboarding
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('seenOnboarding', true);
+
+      // Kiểm tra widget còn tồn tại không trước khi chuyển trang (để tránh lỗi)
+      if (!mounted) return;
+
+      // 2. SỬA LẠI: Chuyển sang LoginScreen thay vì UserInfoScreen
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const UserInfoScreen()),
+        MaterialPageRoute(builder: (_) => const LoginScreen()),
       );
     } else {
+      // Nếu chưa phải trang cuối, lướt sang trang tiếp theo
       _controller.nextPage(
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeOut,

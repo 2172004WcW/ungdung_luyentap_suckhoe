@@ -4,7 +4,7 @@ import 'profile_screen.dart';
 import 'handbook_screen.dart';
 import 'dashboard_screen.dart';
 import 'workout_tracking_screen.dart';
-import '../services/storage_service.dart';
+import '../services/storage_service.dart'; // Import file vừa tạo ở trên
 
 class HomeScreen extends StatefulWidget {
   final UserProfile userProfile;
@@ -22,6 +22,7 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     _currentProfile = widget.userProfile;
+    // Lưu profile xuống máy để lần sau mở app có thể load nhanh (nếu muốn)
     StorageService.saveProfile(_currentProfile);
   }
 
@@ -32,6 +33,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Danh sách các màn hình con
     final pages = <Widget>[
       DashboardScreen(userProfile: _currentProfile),
       const HandbookScreen(),

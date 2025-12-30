@@ -20,18 +20,8 @@ class StorageService {
   // ================= PROFILE (LOCAL) =================
   static Future<void> saveProfile(UserProfile profile) async {
     final prefs = await _prefs;
-    await prefs.setString(_profileKey, jsonEncode({
-      'id': profile.id,
-      'name': profile.name,
-      'avatar': profile.avatar,
-      'gender': profile.gender,
-      'age': profile.age,
-      'weight': profile.weight,
-      'height': profile.height,
-      'goal': profile.goal,
-      'location': profile.location,
-      'workoutPlan': profile.workoutPlan,
-    }));
+    // Dùng hàm toMap() có sẵn trong Model cho gọn và đồng bộ
+    await prefs.setString(_profileKey, jsonEncode(profile.toMap()));
   }
 
   static Future<UserProfile?> loadProfile() async {
@@ -39,22 +29,18 @@ class StorageService {
     final data = prefs.getString(_profileKey);
     if (data == null) return null;
 
-    final map = jsonDecode(data) as Map<String, dynamic>;
-    return UserProfile(
-      id: map['id'] as String? ?? 'temp_id_001',
-      name: map['name'] as String? ?? 'Người dùng',
-      avatar: map['avatar'] as String? ?? 'assets/onboarding/1.jpg',
-      gender: map['gender'] as String? ?? 'Nam',
-      age: map['age'] as int? ?? 20,
-      weight: (map['weight'] as num?)?.toDouble() ?? 60,
-      height: (map['height'] as num?)?.toDouble() ?? 170,
-      goal: map['goal'] as String? ?? 'Giảm cân',
-      location: map['location'] as String? ?? 'Tại nhà',
-      workoutPlan: map['workoutPlan'] as String? ?? 'Chưa chọn',
-    );
+    try {
+      final map = jsonDecode(data) as Map<String, dynamic>;
+      // Dùng hàm fromFirestore (hoặc fromJson) để tận dụng logic fallback
+      // Lưu ý: Local storage không có docId riêng biệt như Firestore, ta lấy từ map['id']
+      return UserProfile.fromFirestore(map, map['id'] ?? 'local_user');
+    } catch (e) {
+      print("Lỗi load profile local: $e");
+      return null;
+    }
   }
 
-  // ================= WORKOUT (LOCAL - để dự phòng / tránh lỗi cũ) =================
+  // ================= WORKOUT (LOCAL) =================
   static Future<void> saveWorkoutSession(WorkoutSession session) async {
     final prefs = await _prefs;
     final sessions = await loadWorkoutSessions();
@@ -69,10 +55,14 @@ class StorageService {
     final prefs = await _prefs;
     final data = prefs.getString(_workoutSessionsKey);
     if (data == null) return [];
-    final list = jsonDecode(data) as List;
-    return list
-        .map((e) => WorkoutSession.fromJson(e as Map<String, dynamic>))
-        .toList();
+    try {
+      final list = jsonDecode(data) as List;
+      return list
+          .map((e) => WorkoutSession.fromJson(e as Map<String, dynamic>))
+          .toList();
+    } catch (e) {
+      return [];
+    }
   }
 
   // ================= WORKOUT (FIREBASE) =================
@@ -80,38 +70,51 @@ class StorageService {
     required String userId,
     required WorkoutSession session,
   }) async {
-    await FirebaseFirestore.instance
-        .collection('users')
-        .doc(userId)
-        .collection('workout_sessions')
-        .doc(session.id)
-        .set(session.toFirestore());
+    try {
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(userId)
+          .collection('workout_sessions')
+          .doc(session.id)
+          .set(session.toFirestore());
+    } catch (e) {
+      print("Lỗi lưu workout lên Firebase: $e");
+    }
   }
 
   static Future<List<WorkoutSession>> loadWorkoutSessionsFromFirebase({
     required String userId,
   }) async {
-    final snap = await FirebaseFirestore.instance
-        .collection('users')
-        .doc(userId)
-        .collection('workout_sessions')
-        .orderBy('date', descending: true)
-        .get();
+    try {
+      final snap = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(userId)
+          .collection('workout_sessions')
+          .orderBy('date', descending: true)
+          .get();
 
-    return snap.docs
-        .map((d) => WorkoutSession.fromFirestore(d.data()))
-        .toList();
+      return snap.docs
+          .map((d) => WorkoutSession.fromFirestore(d.data()))
+          .toList();
+    } catch (e) {
+      print("Lỗi load workout từ Firebase: $e");
+      return [];
+    }
   }
 
   // ================= NUTRITION (LOCAL) =================
   static Future<void> saveDailyNutrition(DailyNutrition nutrition) async {
     final prefs = await _prefs;
     final logs = await loadNutritionLogs();
+    
+    // Xóa log cũ cùng ngày để cập nhật mới
     logs.removeWhere((log) =>
         log.date.year == nutrition.date.year &&
         log.date.month == nutrition.date.month &&
         log.date.day == nutrition.date.day);
+        
     logs.add(nutrition);
+    
     await prefs.setString(
       _nutritionLogsKey,
       jsonEncode(logs.map((l) => l.toJson()).toList()),
@@ -122,21 +125,28 @@ class StorageService {
     final prefs = await _prefs;
     final data = prefs.getString(_nutritionLogsKey);
     if (data == null) return [];
-    final list = jsonDecode(data) as List;
-    return list
-        .map((e) => DailyNutrition.fromJson(e as Map<String, dynamic>))
-        .toList();
+    try {
+      final list = jsonDecode(data) as List;
+      return list
+          .map((e) => DailyNutrition.fromJson(e as Map<String, dynamic>))
+          .toList();
+    } catch (e) {
+      return [];
+    }
   }
 
   // ================= HEALTH STATS (LOCAL) =================
   static Future<void> saveHealthStats(HealthStats stats) async {
     final prefs = await _prefs;
     final allStats = await loadHealthStats();
+    
     allStats.removeWhere((s) =>
         s.date.year == stats.date.year &&
         s.date.month == stats.date.month &&
         s.date.day == stats.date.day);
+        
     allStats.add(stats);
+    
     await prefs.setString(
       _healthStatsKey,
       jsonEncode(allStats.map((s) => s.toJson()).toList()),
@@ -147,13 +157,17 @@ class StorageService {
     final prefs = await _prefs;
     final data = prefs.getString(_healthStatsKey);
     if (data == null) return [];
-    final list = jsonDecode(data) as List;
-    return list
-        .map((e) => HealthStats.fromJson(e as Map<String, dynamic>))
-        .toList();
+    try {
+      final list = jsonDecode(data) as List;
+      return list
+          .map((e) => HealthStats.fromJson(e as Map<String, dynamic>))
+          .toList();
+    } catch (e) {
+      return [];
+    }
   }
 
-  // ================= STREAK (LOCAL - giữ nếu bạn cần) =================
+  // ================= STREAK & UTILS =================
   static Future<void> saveStreakLocal(Map<String, dynamic> streakJson) async {
     final prefs = await _prefs;
     await prefs.setString(_streakKey, jsonEncode(streakJson));

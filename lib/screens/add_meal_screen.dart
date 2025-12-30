@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:uuid/uuid.dart';
 import '../models/nutrition_log.dart';
 import '../models/thuc_pham.dart';
-import '../models/handbook_topic.dart';
-import '../services/storage_service.dart';
-import '../services/handbook_firestore_service.dart';
+import '../services/nutrition_service.dart';
 
 class AddMealScreen extends StatefulWidget {
   final DateTime date;
@@ -15,8 +14,34 @@ class AddMealScreen extends StatefulWidget {
 }
 
 class _AddMealScreenState extends State<AddMealScreen> {
+  final NutritionService _nutritionService = NutritionService();
+  
   MealType _selectedType = MealType.breakfast;
   final List<MealItem> _items = [];
+  String _searchQuery = ''; 
+
+  // --- HÀM MỚI: Xử lý hiển thị ảnh thông minh ---
+  Widget _buildFoodImage(String? url) {
+    if (url == null || url.isEmpty) {
+      return const Icon(Icons.fastfood, size: 40, color: Colors.grey);
+    }
+    // Nếu đường dẫn chứa 'assets/', dùng Image.asset
+    if (url.contains('assets/')) {
+      return Image.asset(
+        url,
+        width: 50, height: 50, fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) => const Icon(Icons.broken_image, size: 40, color: Colors.grey),
+      );
+    } 
+    // Ngược lại dùng Image.network
+    else {
+      return Image.network(
+        url,
+        width: 50, height: 50, fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) => const Icon(Icons.fastfood, size: 40, color: Colors.grey),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -24,16 +49,16 @@ class _AddMealScreenState extends State<AddMealScreen> {
       appBar: AppBar(title: const Text('Thêm bữa ăn')),
       body: Column(
         children: [
-          // Chọn loại bữa ăn
+          // 1. Chọn loại bữa ăn
           Padding(
             padding: const EdgeInsets.all(16),
             child: SegmentedButton<MealType>(
-              segments: MealType.values.map((type) {
-                return ButtonSegment<MealType>(
-                  value: type,
-                  label: Text(type.displayName),
-                );
-              }).toList(),
+              segments: const [
+                ButtonSegment<MealType>(value: MealType.breakfast, label: Text("Sáng")),
+                ButtonSegment<MealType>(value: MealType.lunch, label: Text("Trưa")),
+                ButtonSegment<MealType>(value: MealType.dinner, label: Text("Tối")),
+                ButtonSegment<MealType>(value: MealType.snack, label: Text("Phụ")),
+              ],
               selected: {_selectedType},
               onSelectionChanged: (Set<MealType> newSelection) {
                 setState(() => _selectedType = newSelection.first);
@@ -41,134 +66,137 @@ class _AddMealScreenState extends State<AddMealScreen> {
             ),
           ),
 
-          // Danh sách món ăn
-          Expanded(
-            child: _items.isEmpty
-                ? Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Icon(
-                          Icons.restaurant_menu,
-                          size: 64,
-                          color: Colors.grey,
-                        ),
-                        const SizedBox(height: 16),
-                        const Text(
-                          'Chưa có món ăn nào',
-                          style: TextStyle(fontSize: 18, color: Colors.grey),
-                        ),
-                        const SizedBox(height: 24),
-                        ElevatedButton.icon(
-                          onPressed: _addFood,
-                          icon: const Icon(Icons.add),
-                          label: const Text('Thêm món ăn'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF1AB7B0),
-                            foregroundColor: Colors.white,
-                          ),
-                        ),
-                      ],
-                    ),
-                  )
-                : ListView.builder(
-                    padding: const EdgeInsets.all(16),
-                    itemCount: _items.length,
-                    itemBuilder: (context, index) {
-                      final item = _items[index];
-                      return Card(
-                        margin: const EdgeInsets.only(bottom: 12),
-                        child: ListTile(
-                          title: Text(item.food.ten),
-                          subtitle: Text(
-                            '${item.quantity.toStringAsFixed(0)}g • '
-                            '${item.totalCalories.toStringAsFixed(0)} kcal',
-                          ),
-                          trailing: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              IconButton(
-                                icon: const Icon(Icons.edit),
-                                onPressed: () => _editItem(index),
-                              ),
-                              IconButton(
-                                icon: const Icon(
-                                  Icons.delete,
-                                  color: Colors.red,
-                                ),
-                                onPressed: () {
-                                  setState(() => _items.removeAt(index));
-                                },
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-          ),
-
-          // Tổng calo
-          if (_items.isNotEmpty)
-            Container(
-              padding: const EdgeInsets.all(16),
-              color: const Color(0xFF1AB7B0).withOpacity(0.1),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text(
-                    'Tổng calo:',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
-                  Text(
-                    '${_items.fold(0.0, (sum, item) => sum + item.totalCalories).toStringAsFixed(0)} kcal',
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF1AB7B0),
-                    ),
-                  ),
-                ],
+          // 2. Danh sách món ĐÃ CHỌN
+          if (_items.isNotEmpty) ...[
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text("Món đã chọn:", style: TextStyle(fontWeight: FontWeight.bold)),
               ),
             ),
+            Container(
+              height: 120,
+              margin: const EdgeInsets.symmetric(vertical: 8),
+              child: ListView.builder(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                itemCount: _items.length,
+                itemBuilder: (context, index) {
+                  final item = _items[index];
+                  return Card(
+                    margin: const EdgeInsets.only(bottom: 8),
+                    color: Colors.green.shade50,
+                    child: ListTile(
+                      dense: true,
+                      // Sử dụng hàm hiển thị ảnh mới
+                      leading: ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: _buildFoodImage(item.food.hinhAnh),
+                      ),
+                      title: Text(item.food.ten),
+                      subtitle: Text('${item.quantity.toStringAsFixed(0)}g • ${item.totalCalories.toStringAsFixed(0)} kcal'),
+                      trailing: IconButton(
+                        icon: const Icon(Icons.close, color: Colors.red),
+                        onPressed: () => setState(() => _items.removeAt(index)),
+                      ),
+                      onTap: () => _editItem(index),
+                    ),
+                  );
+                },
+              ),
+            ),
+            const Divider(),
+          ],
 
-          // Nút thêm món và lưu
+          // 3. Thanh tìm kiếm
           Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: TextField(
+              decoration: const InputDecoration(
+                labelText: "Tìm món ăn (Phở, Cơm, Gà...)",
+                prefixIcon: Icon(Icons.search),
+                border: OutlineInputBorder(),
+                filled: true,
+                fillColor: Colors.white,
+              ),
+              onChanged: (val) => setState(() => _searchQuery = val.toLowerCase()),
+            ),
+          ),
+
+          // 4. Danh sách món ăn TỪ FIREBASE
+          Expanded(
+            child: StreamBuilder<List<ThucPham>>(
+              stream: _nutritionService.getCommonFoods(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                
+                if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                  return const Center(child: Text("Chưa có dữ liệu món ăn trên hệ thống"));
+                }
+
+                final foods = snapshot.data!.where((f) {
+                  return f.ten.toLowerCase().contains(_searchQuery);
+                }).toList();
+
+                if (foods.isEmpty) {
+                  return const Center(child: Text("Không tìm thấy món ăn nào"));
+                }
+
+                return ListView.builder(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  itemCount: foods.length,
+                  itemBuilder: (context, index) {
+                    final food = foods[index];
+                    return Card(
+                      margin: const EdgeInsets.only(bottom: 8),
+                      child: ListTile(
+                        // Sử dụng hàm hiển thị ảnh mới
+                        leading: ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: _buildFoodImage(food.hinhAnh),
+                        ),
+                        title: Text(food.ten, style: const TextStyle(fontWeight: FontWeight.bold)),
+                        subtitle: Text("${food.calorie} kcal / 100g"),
+                        trailing: const Icon(Icons.add_circle_outline, color: Color(0xFF1AB7B0), size: 28),
+                        onTap: () => _addFoodWithQuantity(food),
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
+          ),
+
+          // 5. Nút LƯU BỮA ĂN
+          Container(
             padding: const EdgeInsets.all(16),
-            child: Column(
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, -2))],
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                if (_items.isNotEmpty)
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton.icon(
-                      onPressed: _addFood,
-                      icon: const Icon(Icons.add),
-                      label: const Text('Thêm món ăn'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF1AB7B0),
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                      ),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text("Tổng cộng:", style: TextStyle(color: Colors.grey)),
+                    Text(
+                      "${_items.fold(0.0, (sum, item) => sum + item.totalCalories).toStringAsFixed(0)} kcal",
+                      style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF1AB7B0)),
                     ),
+                  ],
+                ),
+                ElevatedButton(
+                  onPressed: _items.isEmpty ? null : _saveMeal,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF1AB7B0),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
                   ),
-                if (_items.isNotEmpty) const SizedBox(height: 8),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: _items.isEmpty ? null : _saveMeal,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF1AB7B0),
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                    ),
-                    child: const Text(
-                      'Lưu bữa ăn',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
+                  child: const Text("LƯU BỮA ĂN", style: TextStyle(fontWeight: FontWeight.bold)),
                 ),
               ],
             ),
@@ -178,80 +206,26 @@ class _AddMealScreenState extends State<AddMealScreen> {
     );
   }
 
-  Future<void> _addFood() async {
-    // Fetch handbook topics from Firestore and find the food list topic
-    final topics = await HandbookFirestoreService().fetchAllTopics();
-    final foodTopic = topics.firstWhere(
-      (t) => t.isFoodList,
-      orElse: () => HandbookTopic(
-        id: '',
-        title: 'Thực phẩm',
-        description: '',
-        imageUrl: '',
-        sections: [],
-        foodList: [],
-      ),
-    );
-    final foods = foodTopic.foodList ?? [];
-
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Chọn thực phẩm'),
-        content: SizedBox(
-          width: double.maxFinite,
-          child: foods.isEmpty
-              ? const Center(child: Text('Không có thực phẩm trong sổ tay.'))
-              : ListView.builder(
-                  shrinkWrap: true,
-                  itemCount: foods.length,
-                  itemBuilder: (context, index) {
-                    final food = foods[index];
-                    return ListTile(
-                      title: Text(food.ten),
-                      subtitle: Text('${food.calorie} kcal/100g'),
-                      onTap: () {
-                        Navigator.pop(context);
-                        _addFoodWithQuantity(food);
-                      },
-                    );
-                  },
-                ),
-        ),
-      ),
-    );
-  }
-
+  // --- Logic Thêm/Sửa Món (GIỮ NGUYÊN) ---
   void _addFoodWithQuantity(ThucPham food) {
     final quantityController = TextEditingController(text: '100');
-
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: Text('Thêm ${food.ten}'),
         content: TextField(
           controller: quantityController,
-          decoration: const InputDecoration(
-            labelText: 'Số lượng (gram)',
-            hintText: '100',
-          ),
+          decoration: const InputDecoration(labelText: 'Số lượng (gram)', suffixText: 'g'),
           keyboardType: TextInputType.number,
+          autofocus: true,
         ),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Hủy'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              final quantity = double.tryParse(quantityController.text) ?? 100;
-              setState(() {
-                _items.add(MealItem(food: food, quantity: quantity));
-              });
-              Navigator.pop(context);
-            },
-            child: const Text('Thêm'),
-          ),
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Hủy')),
+          ElevatedButton(onPressed: () {
+            final quantity = double.tryParse(quantityController.text) ?? 100;
+            setState(() => _items.add(MealItem(food: food, quantity: quantity)));
+            Navigator.pop(context);
+          }, child: const Text('Thêm')),
         ],
       ),
     );
@@ -259,86 +233,59 @@ class _AddMealScreenState extends State<AddMealScreen> {
 
   void _editItem(int index) {
     final item = _items[index];
-    final quantityController = TextEditingController(
-      text: item.quantity.toStringAsFixed(0),
-    );
-
+    final quantityController = TextEditingController(text: item.quantity.toStringAsFixed(0));
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Chỉnh sửa ${item.food.ten}'),
-        content: TextField(
-          controller: quantityController,
-          decoration: const InputDecoration(labelText: 'Số lượng (gram)'),
-          keyboardType: TextInputType.number,
-        ),
+        title: Text('Sửa ${item.food.ten}'),
+        content: TextField(controller: quantityController, decoration: const InputDecoration(labelText: 'Số lượng (gram)', suffixText: 'g'), keyboardType: TextInputType.number),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Hủy'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              final quantity = double.tryParse(quantityController.text) ?? 100;
-              setState(() {
-                _items[index] = MealItem(food: item.food, quantity: quantity);
-              });
-              Navigator.pop(context);
-            },
-            child: const Text('Lưu'),
-          ),
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Hủy')),
+          ElevatedButton(onPressed: () {
+            final quantity = double.tryParse(quantityController.text) ?? 100;
+            setState(() => _items[index] = MealItem(food: item.food, quantity: quantity));
+            Navigator.pop(context);
+          }, child: const Text('Cập nhật')),
         ],
       ),
     );
   }
 
   Future<void> _saveMeal() async {
-    if (_items.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Vui lòng thêm ít nhất một món ăn')),
+    if (_items.isEmpty) return;
+    try {
+      DailyNutrition currentNutrition = await _nutritionService.getDailyNutrition(widget.date);
+      final mealId = const Uuid().v4(); 
+      final newMeal = Meal(id: mealId, date: widget.date, type: _selectedType, items: _items);
+      
+      List<Meal> updatedMeals = List.from(currentNutrition.meals);
+      int existingIndex = updatedMeals.indexWhere((m) => m.type == _selectedType);
+      if (existingIndex != -1) {
+         Meal existing = updatedMeals[existingIndex];
+         List<MealItem> mergedItems = [...existing.items, ..._items];
+         updatedMeals[existingIndex] = Meal(id: existing.id, date: existing.date, type: existing.type, items: mergedItems);
+      } else {
+         updatedMeals.add(newMeal);
+      }
+
+      final updatedNutrition = DailyNutrition(
+        date: currentNutrition.date,
+        meals: updatedMeals,
+        targetCalories: currentNutrition.targetCalories,
+        targetProtein: currentNutrition.targetProtein,
+        targetCarbs: currentNutrition.targetCarbs,
+        targetFat: currentNutrition.targetFat,
+        waterIntake: currentNutrition.waterIntake,
       );
-      return;
-    }
 
-    // Load daily nutrition hiện tại
-    final logs = await StorageService.loadNutritionLogs();
-    DailyNutrition? dailyNutrition = logs.firstWhere(
-      (log) =>
-          log.date.year == widget.date.year &&
-          log.date.month == widget.date.month &&
-          log.date.day == widget.date.day,
-      orElse: () => DailyNutrition(
-        date: widget.date,
-        meals: [],
-        targetCalories: 2000,
-        targetProtein: 150,
-        targetCarbs: 250,
-        targetFat: 65,
-      ),
-    );
+      await _nutritionService.saveDailyNutrition(updatedNutrition);
 
-    // Tạo meal mới
-    final meal = Meal(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
-      date: widget.date,
-      type: _selectedType,
-      items: _items,
-    );
-
-    // Thêm vào daily nutrition
-    final updated = DailyNutrition(
-      date: dailyNutrition.date,
-      meals: [...dailyNutrition.meals, meal],
-      targetCalories: dailyNutrition.targetCalories,
-      targetProtein: dailyNutrition.targetProtein,
-      targetCarbs: dailyNutrition.targetCarbs,
-      targetFat: dailyNutrition.targetFat,
-      waterIntake: dailyNutrition.waterIntake,
-    );
-
-    await StorageService.saveDailyNutrition(updated);
-    if (mounted) {
-      Navigator.pop(context, true);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Đã lưu bữa ăn thành công!")));
+        Navigator.pop(context, true); 
+      }
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Lỗi khi lưu: $e")));
     }
   }
 }

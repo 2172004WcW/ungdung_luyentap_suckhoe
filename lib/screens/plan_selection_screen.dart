@@ -1,16 +1,17 @@
 // lib/screens/plan_selection_screen.dart
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart'; // THÊM: Để dùng Firebase
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/user_profile.dart';
-import '../services/storage_service.dart'; // THÊM: Để lưu bộ nhớ máy
+import '../services/storage_service.dart';
 import 'home_screen.dart';
 
 class PlanSelectionScreen extends StatelessWidget {
-  final UserProfile tempProfile;
+  // 1. SỬA TÊN BIẾN: Đổi 'tempProfile' thành 'userProfile' để khớp với UserInfoScreen
+  final UserProfile userProfile;
 
-  PlanSelectionScreen({super.key, required this.tempProfile});
+  const PlanSelectionScreen({super.key, required this.userProfile});
 
-  final List<Map<String, String>> plans = [
+  final List<Map<String, String>> plans = const [
     {'title': 'Giảm mỡ toàn thân', 'desc': 'Đốt cháy calo tối đa với các bài cardio cường độ cao.', 'goal': 'Giảm cân'},
     {'title': 'Tăng cơ bắp cơ bản', 'desc': 'Xây dựng nền tảng cơ bắp vững chắc cho người mới.', 'goal': 'Tăng cơ'},
     {'title': 'Cơ bụng 6 múi', 'desc': 'Tập trung vào nhóm cơ core và giảm mỡ bụng.', 'goal': 'Tăng cơ'},
@@ -25,45 +26,51 @@ class PlanSelectionScreen extends StatelessWidget {
 
   // HÀM XỬ LÝ LƯU DỮ LIỆU
   Future<void> _handlePlanSelection(BuildContext context, Map<String, String> plan) async {
-    // 1. Cập nhật nốt thông tin vào Profile
-    tempProfile.goal = plan['goal']!;
-    tempProfile.workoutPlan = plan['title']!;
+    // 2. Cập nhật thông tin vào biến userProfile
+    userProfile.goal = plan['goal']!;
+    userProfile.workoutPlan = plan['title']!;
 
     try {
-      // Hiển thị vòng xoay chờ (loading)
+      // Hiển thị vòng xoay chờ
       showDialog(
         context: context,
         barrierDismissible: false,
         builder: (context) => const Center(child: CircularProgressIndicator(color: Color(0xFF1AB7B0))),
       );
 
-      // 2. LƯU LÊN FIREBASE CLOUD FIRESTORE
+      // 3. LƯU LÊN FIREBASE (QUAN TRỌNG: Thêm cờ isInfoCompleted)
       await FirebaseFirestore.instance
           .collection('users')
-          .doc(tempProfile.id) // Dùng ID đã tạo từ bước trước
-          .set(tempProfile.toMap());
+          .doc(userProfile.id)
+          .set({
+            ...userProfile.toMap(), // Lấy toàn bộ dữ liệu profile
+            'isInfoCompleted': true, // Đánh dấu ĐÃ HOÀN TẤT để lần sau vào thẳng Home
+          }, SetOptions(merge: true)); // Dùng merge để an toàn hơn
 
-      // 3. LƯU VÀO BỘ NHỚ MÁY (LOCAL STORAGE)
-      await StorageService.saveProfile(tempProfile);
+      // 4. LƯU VÀO BỘ NHỚ MÁY
+      await StorageService.saveProfile(userProfile);
 
       // Tắt loading
       if (!context.mounted) return;
       Navigator.pop(context);
 
-      // 4. CHUYỂN VÀO MÀN HÌNH CHÍNH
+      // 5. CHUYỂN VÀO MÀN HÌNH CHÍNH (Xóa hết lịch sử back để không quay lại được)
       Navigator.pushAndRemoveUntil(
         context,
         MaterialPageRoute(
-          builder: (_) => HomeScreen(userProfile: tempProfile),
+          builder: (_) => HomeScreen(userProfile: userProfile),
         ),
         (route) => false,
       );
     } catch (e) {
       // Tắt loading nếu lỗi
-      Navigator.pop(context);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Lỗi khi lưu dữ liệu: $e')),
-      );
+      if (context.mounted) Navigator.pop(context);
+      
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Lỗi khi lưu dữ liệu: $e')),
+        );
+      }
     }
   }
 
@@ -92,7 +99,7 @@ class PlanSelectionScreen extends StatelessWidget {
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   child: InkWell(
                     borderRadius: BorderRadius.circular(12),
-                    onTap: () => _handlePlanSelection(context, plan), // Gọi hàm xử lý lưu
+                    onTap: () => _handlePlanSelection(context, plan),
                     child: Padding(
                       padding: const EdgeInsets.all(16.0),
                       child: Row(
