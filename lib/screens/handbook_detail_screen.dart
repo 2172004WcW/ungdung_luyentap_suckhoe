@@ -10,10 +10,12 @@ import '../services/handbook_firestore_service.dart';
 class HandbookDetailScreen extends StatefulWidget {
   final String topicId;
   final HandbookTopic? initialTopic; // fallback
+  final bool showAppBar;
   const HandbookDetailScreen({
     Key? key,
     required this.topicId,
     this.initialTopic,
+    this.showAppBar = true,
   }) : super(key: key);
 
   @override
@@ -63,16 +65,21 @@ class _HandbookDetailScreenState extends State<HandbookDetailScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: AppBar(
-        title: Text(
-          currentTopic?.title ?? widget.initialTopic?.title ?? '',
-          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
-        ),
-        backgroundColor: primaryColor,
-        foregroundColor: Colors.white,
-        elevation: 0,
-        centerTitle: true,
-      ),
+      appBar: widget.showAppBar
+          ? AppBar(
+              title: Text(
+                currentTopic?.title ?? widget.initialTopic?.title ?? '',
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 20,
+                ),
+              ),
+              backgroundColor: primaryColor,
+              foregroundColor: Colors.white,
+              elevation: 0,
+              centerTitle: true,
+            )
+          : null,
       body: StreamBuilder<HandbookTopic?>(
         stream: HandbookFirestoreService().topicStream(widget.topicId),
         builder: (context, snapshot) {

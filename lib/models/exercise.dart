@@ -7,7 +7,9 @@ class Exercise {
   final String equipment; // Dụng cụ: Tạ, Bodyweight, Máy, Dây
   final String? imageUrl;
   final String? videoUrl;
+  final List<String>? instructionImages;
   final List<String> instructions; // Hướng dẫn thực hiện
+  final String? theory;
   final String difficulty; // Dễ, Trung bình, Khó
   final int? durationSeconds;
 
@@ -19,7 +21,9 @@ class Exercise {
     required this.equipment,
     this.imageUrl,
     this.videoUrl,
+    this.instructionImages,
     required this.instructions,
+    this.theory,
     required this.difficulty,
     this.durationSeconds,
   });
@@ -33,7 +37,9 @@ class Exercise {
       'equipment': equipment,
       'imageUrl': imageUrl,
       'videoUrl': videoUrl,
+      'instructionImages': instructionImages,
       'instructions': instructions,
+      'theory': theory,
       'difficulty': difficulty,
       'durationSeconds': durationSeconds,
     };
@@ -48,7 +54,11 @@ class Exercise {
       equipment: json['equipment'] as String,
       imageUrl: json['imageUrl'] as String?,
       videoUrl: json['videoUrl'] as String?,
+      instructionImages: json['instructionImages'] != null
+          ? List<String>.from(json['instructionImages'] as List)
+          : null,
       instructions: List<String>.from(json['instructions'] as List),
+      theory: json['theory'] as String?,
       difficulty: json['difficulty'] as String,
       durationSeconds: (json['durationSeconds'] as num?)?.toInt(),
     );
@@ -61,18 +71,10 @@ class ExerciseSet {
   final double? weight; // Trọng lượng (kg), null nếu bodyweight
   final int? restSeconds; // Thời gian nghỉ (giây)
 
-  ExerciseSet({
-    required this.reps,
-    this.weight,
-    this.restSeconds,
-  });
+  ExerciseSet({required this.reps, this.weight, this.restSeconds});
 
   Map<String, dynamic> toJson() {
-    return {
-      'reps': reps,
-      'weight': weight,
-      'restSeconds': restSeconds,
-    };
+    return {'reps': reps, 'weight': weight, 'restSeconds': restSeconds};
   }
 
   factory ExerciseSet.fromJson(Map<String, dynamic> json) {
@@ -90,11 +92,7 @@ class WorkoutExercise {
   final List<ExerciseSet> sets;
   final String? notes; // Ghi chú
 
-  WorkoutExercise({
-    required this.exercise,
-    required this.sets,
-    this.notes,
-  });
+  WorkoutExercise({required this.exercise, required this.sets, this.notes});
 
   Map<String, dynamic> toJson() {
     return {
@@ -114,4 +112,3 @@ class WorkoutExercise {
     );
   }
 }
-
