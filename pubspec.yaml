@@ -52,7 +52,8 @@ dependencies:
 dev_dependencies:
   flutter_test:
     sdk: flutter
-
+  flutter_launcher_icons: ^0.13.1
+  flutter_native_splash: ^2.3.10
   # The "flutter_lints" package below contains a set of recommended lints to
   # encourage good coding practices. The lint set provided by the package is
   # activated in the `analysis_options.yaml` file located at the root of your
@@ -100,3 +101,30 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
+# Cấu hình cho flutter_launcher_icons
+flutter_icons:
+  android: "app_icon" # Tên file icon trên Android (giữ nguyên cũng được)
+  ios: true # Kích hoạt cho iOS
+  image_path: "assets/app_icon/app_icon.png" # ĐƯỜNG DẪN ĐẾN LOGO CỦA BẠN
+  min_sdk_android: 21 # Hỗ trợ các máy Android đời cũ
+  
+  # (Tùy chọn nâng cao) Nếu muốn icon thích ứng (adaptive icon) trên Android mới:
+  # adaptive_icon_background: "#FFFFFF" # Màu nền (mã HEX)
+  # adaptive_icon_foreground: "assets/icon/app_icon_foreground.png" # Ảnh tiền cảnh
+  # Cấu hình cho flutter_native_splash
+flutter_native_splash:
+  # Màu nền của màn hình chào
+  color: "#063970" 
+  
+  # (Tùy chọn) Ảnh logo nằm giữa màn hình
+  image: assets/app_icon/app_icon.png 
+
+  # (Quan trọng cho Android 12 trở lên)
+  android_12:
+    # Ảnh logo giữa cho Android 12+
+    image: assets/app_icon/app_icon.png 
+    # Màu nền vòng tròn icon (nên để trùng màu nền chính)
+    icon_background_color: "#063970" 
+  
+  # (Tùy chọn) Tắt chế độ toàn màn hình nếu muốn hiện thanh trạng thái
+  fullscreen: false
