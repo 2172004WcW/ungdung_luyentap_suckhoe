@@ -53,7 +53,7 @@ class NutritionService {
     });
   }
 
-  // 2. Lấy dữ liệu dinh dưỡng (REAL-TIME STREAM - MỚI)
+  // 2. Lấy dữ liệu dinh dưỡng
   Stream<DailyNutrition> getDailyNutritionStream(DateTime date) {
     final user = _auth.currentUser;
     // Nếu chưa login trả về Stream mặc định rỗng
@@ -87,7 +87,6 @@ class NutritionService {
         });
   }
   
-  // Hàm cũ (giữ lại để tương thích nếu cần, nhưng ta sẽ dùng Stream là chính)
   Future<DailyNutrition> getDailyNutrition(DateTime date) async {
     final user = _auth.currentUser;
     if (user == null) return DailyNutrition(date: date, meals: []);

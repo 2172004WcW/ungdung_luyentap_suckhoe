@@ -22,7 +22,6 @@ class _NutritionTrackingScreenState extends State<NutritionTrackingScreen> {
       appBar: AppBar(
         title: const Text('Theo dõi dinh dưỡng'),
         actions: [
-          // ĐÃ XÓA NÚT GỢI Ý MÓN ĂN Ở ĐÂY
           IconButton(
             icon: const Icon(Icons.calendar_today),
             onPressed: _selectDate,
@@ -51,7 +50,7 @@ class _NutritionTrackingScreenState extends State<NutritionTrackingScreen> {
 
           return Column(
             children: [
-              // --- Header Thống kê ---
+              //Header Thống kê
               Container(
                 padding: const EdgeInsets.all(20),
                 color: const Color(0xFF1AB7B0).withOpacity(0.1),
@@ -110,7 +109,7 @@ class _NutritionTrackingScreenState extends State<NutritionTrackingScreen> {
     );
   }
 
-  // --- Các Widget con giữ nguyên ---
+  //Các Widget con giữ nguyên
   Widget _buildStatCard(String label, String value, double progress, Color color) {
     return Expanded(
       child: Container(

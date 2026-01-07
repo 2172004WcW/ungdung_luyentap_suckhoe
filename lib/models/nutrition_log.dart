@@ -5,7 +5,7 @@ class Meal {
   final String id;
   final DateTime date;
   final MealType type; // Sáng, Trưa, Tối, Bữa phụ
-  final List<MealItem> items; // Danh sách món ăn
+  final List<MealItem> items; //Danh sách món ăn
   final String? notes;
 
   Meal({
@@ -16,22 +16,22 @@ class Meal {
     this.notes,
   });
 
-  /// Tính tổng calo của bữa ăn
+  //Tính tổng calo của bữa ăn
   double get totalCalories {
     return items.fold(0.0, (sum, item) => sum + item.totalCalories);
   }
 
-  /// Tính tổng protein
+  //Tính tổng protein
   double get totalProtein {
     return items.fold(0.0, (sum, item) => sum + item.totalProtein);
   }
 
-  /// Tính tổng carbs
+  //Tính tổng carbs
   double get totalCarbs {
     return items.fold(0.0, (sum, item) => sum + item.totalCarbs);
   }
 
-  /// Tính tổng fat
+  //Tính tổng fat
   double get totalFat {
     return items.fold(0.0, (sum, item) => sum + item.totalFat);
   }
@@ -68,7 +68,7 @@ enum MealType {
   lunch, // Trưa
   dinner, // Tối
   snack, // Bữa phụ
-  other, // Khác
+  other, 
 }
 
 extension MealTypeExtension on MealType {

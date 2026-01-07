@@ -20,7 +20,7 @@ class _AddMealScreenState extends State<AddMealScreen> {
   final List<MealItem> _items = [];
   String _searchQuery = ''; 
 
-  // --- HÀM MỚI: Xử lý hiển thị ảnh thông minh ---
+  //Xử lý hiển thị ảnh thông minh
   Widget _buildFoodImage(String? url) {
     if (url == null || url.isEmpty) {
       return const Icon(Icons.fastfood, size: 40, color: Colors.grey);
@@ -33,7 +33,6 @@ class _AddMealScreenState extends State<AddMealScreen> {
         errorBuilder: (_, __, ___) => const Icon(Icons.broken_image, size: 40, color: Colors.grey),
       );
     } 
-    // Ngược lại dùng Image.network
     else {
       return Image.network(
         url,
@@ -49,7 +48,7 @@ class _AddMealScreenState extends State<AddMealScreen> {
       appBar: AppBar(title: const Text('Thêm bữa ăn')),
       body: Column(
         children: [
-          // 1. Chọn loại bữa ăn
+          //1.Chọn loại bữa ăn
           Padding(
             padding: const EdgeInsets.all(16),
             child: SegmentedButton<MealType>(
@@ -66,7 +65,7 @@ class _AddMealScreenState extends State<AddMealScreen> {
             ),
           ),
 
-          // 2. Danh sách món ĐÃ CHỌN
+          //2.Danh sách món ĐÃ CHỌN
           if (_items.isNotEmpty) ...[
             const Padding(
               padding: EdgeInsets.symmetric(horizontal: 16),
@@ -108,7 +107,7 @@ class _AddMealScreenState extends State<AddMealScreen> {
             const Divider(),
           ],
 
-          // 3. Thanh tìm kiếm
+          //3.Thanh tìm kiếm
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             child: TextField(
@@ -123,7 +122,7 @@ class _AddMealScreenState extends State<AddMealScreen> {
             ),
           ),
 
-          // 4. Danh sách món ăn TỪ FIREBASE
+          //4.Danh sách món ăn TỪ FIREBASE
           Expanded(
             child: StreamBuilder<List<ThucPham>>(
               stream: _nutritionService.getCommonFoods(),
@@ -169,7 +168,7 @@ class _AddMealScreenState extends State<AddMealScreen> {
             ),
           ),
 
-          // 5. Nút LƯU BỮA ĂN
+          //5.Nút LƯU BỮA ĂN
           Container(
             padding: const EdgeInsets.all(16),
             decoration: const BoxDecoration(
@@ -206,7 +205,7 @@ class _AddMealScreenState extends State<AddMealScreen> {
     );
   }
 
-  // --- Logic Thêm/Sửa Món (GIỮ NGUYÊN) ---
+  //Thêm/Sửa Món
   void _addFoodWithQuantity(ThucPham food) {
     final quantityController = TextEditingController(text: '100');
     showDialog(

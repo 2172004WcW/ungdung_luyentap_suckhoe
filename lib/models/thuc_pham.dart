@@ -6,7 +6,6 @@ class ThucPham {
   final double protein;
   final double carbs;
   final double fat;
-  // BỎ DẤU ? TẠI ĐÂY:
   final String hinhAnh;
   final String moTa;
 
@@ -19,7 +18,6 @@ class ThucPham {
     this.protein = 0,
     this.carbs = 0,
     this.fat = 0,
-    // THÊM required VÀ BỎ DẤU ? TẠI ĐÂY:
     required this.hinhAnh,
     required this.moTa,
   });
