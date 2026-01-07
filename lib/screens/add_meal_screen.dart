@@ -25,21 +25,13 @@ class _AddMealScreenState extends State<AddMealScreen> {
     if (url == null || url.isEmpty) {
       return const Icon(Icons.fastfood, size: 40, color: Colors.grey);
     }
-    // Nếu đường dẫn chứa 'assets/', dùng Image.asset
-    if (url.contains('assets/')) {
-      return Image.asset(
-        url,
-        width: 50, height: 50, fit: BoxFit.cover,
-        errorBuilder: (_, __, ___) => const Icon(Icons.broken_image, size: 40, color: Colors.grey),
-      );
-    } 
-    else {
-      return Image.network(
-        url,
-        width: 50, height: 50, fit: BoxFit.cover,
-        errorBuilder: (_, __, ___) => const Icon(Icons.fastfood, size: 40, color: Colors.grey),
-      );
-    }
+    return Image(
+      image: url.contains('assets/') ? AssetImage(url) : NetworkImage(url) as ImageProvider,
+      width: 50,
+      height: 50,
+      fit: BoxFit.cover,
+      errorBuilder: (_, __, ___) => const Icon(Icons.broken_image, size: 40, color: Colors.grey),
+    );
   }
 
   @override
@@ -261,21 +253,17 @@ class _AddMealScreenState extends State<AddMealScreen> {
       int existingIndex = updatedMeals.indexWhere((m) => m.type == _selectedType);
       if (existingIndex != -1) {
          Meal existing = updatedMeals[existingIndex];
-         List<MealItem> mergedItems = [...existing.items, ..._items];
-         updatedMeals[existingIndex] = Meal(id: existing.id, date: existing.date, type: existing.type, items: mergedItems);
+         updatedMeals[existingIndex] = Meal(
+           id: existing.id, 
+           date: existing.date, 
+           type: existing.type, 
+           items: [...existing.items, ..._items]
+         );
       } else {
          updatedMeals.add(newMeal);
       }
 
-      final updatedNutrition = DailyNutrition(
-        date: currentNutrition.date,
-        meals: updatedMeals,
-        targetCalories: currentNutrition.targetCalories,
-        targetProtein: currentNutrition.targetProtein,
-        targetCarbs: currentNutrition.targetCarbs,
-        targetFat: currentNutrition.targetFat,
-        waterIntake: currentNutrition.waterIntake,
-      );
+      final updatedNutrition = currentNutrition.copyWith(meals: updatedMeals);
 
       await _nutritionService.saveDailyNutrition(updatedNutrition);
 

@@ -205,5 +205,25 @@ class DailyNutrition {
       waterIntake: (json['waterIntake'] as num?)?.toDouble() ?? 0,
     );
   }
+
+  DailyNutrition copyWith({
+    DateTime? date,
+    List<Meal>? meals,
+    double? targetCalories,
+    double? targetProtein,
+    double? targetCarbs,
+    double? targetFat,
+    double? waterIntake,
+  }) {
+    return DailyNutrition(
+      date: date ?? this.date,
+      meals: meals ?? this.meals,
+      targetCalories: targetCalories ?? this.targetCalories,
+      targetProtein: targetProtein ?? this.targetProtein,
+      targetCarbs: targetCarbs ?? this.targetCarbs,
+      targetFat: targetFat ?? this.targetFat,
+      waterIntake: waterIntake ?? this.waterIntake,
+    );
+  }
 }
 

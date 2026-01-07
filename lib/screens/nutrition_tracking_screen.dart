@@ -214,7 +214,7 @@ class _NutritionTrackingScreenState extends State<NutritionTrackingScreen> {
     );
     if (confirmed == true) {
       final ml = int.tryParse(controller.text) ?? 0;
-      final updated = DailyNutrition(date: nutrition.date, meals: nutrition.meals, targetCalories: nutrition.targetCalories, targetProtein: nutrition.targetProtein, targetCarbs: nutrition.targetCarbs, targetFat: nutrition.targetFat, waterIntake: nutrition.waterIntake + ml);
+      final updated = nutrition.copyWith(waterIntake: nutrition.waterIntake + ml);
       await _nutritionService.saveDailyNutrition(updated);
     }
   }
@@ -240,7 +240,7 @@ class _NutritionTrackingScreenState extends State<NutritionTrackingScreen> {
         } else {
           updatedMeals[mealIndex] = Meal(id: targetMeal.id, date: targetMeal.date, type: targetMeal.type, items: newItems, notes: targetMeal.notes);
         }
-        final updatedNutrition = DailyNutrition(date: nutrition.date, meals: updatedMeals, targetCalories: nutrition.targetCalories, targetProtein: nutrition.targetProtein, targetCarbs: nutrition.targetCarbs, targetFat: nutrition.targetFat, waterIntake: nutrition.waterIntake);
+        final updatedNutrition = nutrition.copyWith(meals: updatedMeals);
         await _nutritionService.saveDailyNutrition(updatedNutrition);
       }
     }

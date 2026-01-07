@@ -2,7 +2,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:cloud_firestore/cloud_firestore.dart'; // Thêm Firestore
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/user_profile.dart';
 
 class EditProfileScreen extends StatefulWidget {
@@ -16,6 +16,9 @@ class EditProfileScreen extends StatefulWidget {
 
 class _EditProfileScreenState extends State<EditProfileScreen> {
   final _formKey = GlobalKey<FormState>();
+  
+  // Màu chủ đạo
+  final Color _primaryColor = const Color(0xFF1AB7B0);
   
   late TextEditingController _nameController;
   late String _avatar; 
@@ -37,6 +40,15 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     _goal = widget.userProfile.goal;
   }
 
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _ageController.dispose();
+    _weightController.dispose();
+    _heightController.dispose();
+    super.dispose();
+  }
+
   Future<void> _pickImage() async {
     final ImagePicker picker = ImagePicker();
     final XFile? image = await picker.pickImage(source: ImageSource.gallery);
@@ -56,21 +68,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     }
   }
 
-  @override
-  void dispose() {
-    _nameController.dispose();
-    _ageController.dispose();
-    _weightController.dispose();
-    _heightController.dispose();
-    super.dispose();
-  }
-
-  // CẬP NHẬT HÀM LƯU DỮ LIỆU LÊN FIREBASE
   Future<void> _saveProfile() async {
     if (_formKey.currentState!.validate()) {
-      // 1. Tạo đối tượng đã cập nhật (Bổ sung tham số id ở đây để hết lỗi)
       final updatedProfile = UserProfile(
-        id: widget.userProfile.id, // SỬA LỖI: Thêm ID từ profile cũ
+        id: widget.userProfile.id,
         name: _nameController.text,
         avatar: _avatar,
         gender: _gender,
@@ -78,134 +79,217 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         weight: double.tryParse(_weightController.text) ?? widget.userProfile.weight,
         height: double.tryParse(_heightController.text) ?? widget.userProfile.height,
         goal: _goal,
-        location: widget.userProfile.location, // Giữ nguyên các giá trị cũ
+        location: widget.userProfile.location,
         workoutPlan: widget.userProfile.workoutPlan,
       );
 
       try {
-        // Hiển thị vòng xoay chờ
         showDialog(
           context: context,
           barrierDismissible: false,
-          builder: (context) => const Center(child: CircularProgressIndicator()),
+          builder: (context) => Center(child: CircularProgressIndicator(color: _primaryColor)),
         );
 
-        // 2. Lưu lên Firestore (Sử dụng hàm toMap đã tạo ở UserProfile)
         await FirebaseFirestore.instance
             .collection('users')
             .doc(updatedProfile.id)
             .set(updatedProfile.toMap(), SetOptions(merge: true));
 
-        // Tắt vòng xoay chờ
         if (!mounted) return;
         Navigator.pop(context); 
 
-        // 3. Quay lại và trả về profile mới để UI cập nhật
         Navigator.pop(context, updatedProfile);
 
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Cập nhật thành công!')),
+          const SnackBar(content: Text('Cập nhật thành công!'), backgroundColor: Colors.green),
         );
       } catch (e) {
-        Navigator.pop(context); // Tắt vòng xoay
+        Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Lỗi khi lưu dữ liệu: $e')),
+          SnackBar(content: Text('Lỗi: $e'), backgroundColor: Colors.red),
         );
       }
     }
   }
 
-  // --- UI giữ nguyên như code của bạn ---
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Chỉnh sửa thông tin')),
+      backgroundColor: Colors.white, // GIỮ NGUYÊN NỀN TRẮNG
+      appBar: AppBar(
+        title: const Text('Chỉnh sửa hồ sơ', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+        backgroundColor: Colors.white,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new, color: Colors.black),
+          onPressed: () => Navigator.pop(context),
+        ),
+      ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24.0),
+        padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 10),
         child: Form(
           key: _formKey,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Center(
-                child: GestureDetector(
-                  onTap: _pickImage,
-                  child: Stack(
-                    children: [
-                      CircleAvatar(
-                        radius: 60,
-                        backgroundImage: _getAvatarImage(_avatar),
-                      ),
-                      Positioned(
-                        bottom: 0,
-                        right: 0,
-                        child: Container(
-                          padding: const EdgeInsets.all(4),
-                          decoration: const BoxDecoration(
-                            color: Color(0xFF1AB7B0),
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(Icons.camera_alt, color: Colors.white, size: 20),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 10),
-              const Center(child: Text('Chạm để đổi ảnh', style: TextStyle(color: Colors.grey))),
+              Center(child: _buildAvatarPicker()),
               const SizedBox(height: 30),
-              TextFormField(
-                controller: _nameController,
-                decoration: const InputDecoration(labelText: 'Tên hiển thị', border: OutlineInputBorder()),
-                validator: (val) => val!.isEmpty ? 'Vui lòng nhập tên' : null,
+
+              _buildSectionTitle("Thông tin cơ bản"),
+              const SizedBox(height: 15),
+              _buildTextField("Họ và tên", _nameController, Icons.person_outline),
+              const SizedBox(height: 20),
+              
+              Row(
+                children: [
+                  Expanded(child: _buildDropdown("Giới tính", _gender, ['Nam', 'Nữ'], (val) => setState(() => _gender = val!))),
+                  const SizedBox(width: 15),
+                  Expanded(child: _buildTextField("Tuổi", _ageController, Icons.calendar_today, isNumber: true)),
+                ],
               ),
-              const SizedBox(height: 16),
-              DropdownButtonFormField<String>(
-                value: _gender,
-                decoration: const InputDecoration(labelText: 'Giới tính', border: OutlineInputBorder()),
-                items: ['Nam', 'Nữ'].map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
-                onChanged: (val) => setState(() => _gender = val!),
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _ageController,
-                keyboardType: TextInputType.number,
-                decoration: const InputDecoration(labelText: 'Tuổi', border: OutlineInputBorder()),
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _weightController,
-                keyboardType: TextInputType.number,
-                decoration: const InputDecoration(labelText: 'Cân nặng (kg)', border: OutlineInputBorder()),
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _heightController,
-                keyboardType: TextInputType.number,
-                decoration: const InputDecoration(labelText: 'Chiều cao (cm)', border: OutlineInputBorder()),
-              ),
-              const SizedBox(height: 16),
-              DropdownButtonFormField<String>(
-                value: _goal,
-                decoration: const InputDecoration(labelText: 'Mục tiêu', border: OutlineInputBorder()),
-                items: ['Giảm cân', 'Tăng cơ', 'Duy trì vóc dáng', 'Nâng cao sức bền'].map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
-                onChanged: (val) => setState(() => _goal = val!),
-              ),
+              
               const SizedBox(height: 30),
+              _buildSectionTitle("Chỉ số cơ thể"),
+              const SizedBox(height: 15),
+              
+              Row(
+                children: [
+                  Expanded(child: _buildTextField("Cân nặng (kg)", _weightController, Icons.monitor_weight_outlined, isNumber: true)),
+                  const SizedBox(width: 15),
+                  Expanded(child: _buildTextField("Chiều cao (cm)", _heightController, Icons.height, isNumber: true)),
+                ],
+              ),
+
+              const SizedBox(height: 30),
+              _buildSectionTitle("Mục tiêu tập luyện"),
+              const SizedBox(height: 15),
+              _buildDropdown(
+                "Mục tiêu hiện tại", 
+                _goal, 
+                ['Giảm cân', 'Tăng cơ', 'Duy trì vóc dáng', 'Nâng cao sức bền'], 
+                (val) => setState(() => _goal = val!)
+              ),
+
+              const SizedBox(height: 40),
+              
               SizedBox(
                 width: double.infinity,
-                height: 50,
-                child: FilledButton(
+                height: 55,
+                child: ElevatedButton(
                   onPressed: _saveProfile,
-                  style: FilledButton.styleFrom(backgroundColor: const Color(0xFF1AB7B0)),
-                  child: const Text('LƯU THAY ĐỔI', style: TextStyle(fontSize: 16)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: _primaryColor,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                    elevation: 5,
+                    shadowColor: _primaryColor.withOpacity(0.4),
+                  ),
+                  child: const Text('LƯU THAY ĐỔI', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, letterSpacing: 1)),
                 ),
               ),
+              const SizedBox(height: 30),
             ],
           ),
         ),
       ),
+    );
+  }
+
+  // --- CÁC WIDGET CON (ĐÃ SỬA MÀU SẮC) ---
+
+  Widget _buildAvatarPicker() {
+    return GestureDetector(
+      onTap: _pickImage,
+      child: Stack(
+        children: [
+          Container(
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(color: _primaryColor.withOpacity(0.5), width: 2),
+              boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 10, offset: const Offset(0, 5))],
+            ),
+            child: CircleAvatar(
+              radius: 65,
+              backgroundColor: Colors.grey.shade200, // Đậm hơn chút cho background avatar
+              backgroundImage: _getAvatarImage(_avatar),
+            ),
+          ),
+          Positioned(
+            bottom: 0,
+            right: 0,
+            child: Container(
+              height: 40,
+              width: 40,
+              decoration: BoxDecoration(
+                color: _primaryColor,
+                shape: BoxShape.circle,
+                border: Border.all(color: Colors.white, width: 3),
+              ),
+              child: const Icon(Icons.camera_alt, color: Colors.white, size: 20),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSectionTitle(String title) {
+    return Text(
+      title,
+      style: TextStyle(color: Colors.grey.shade800, fontSize: 18, fontWeight: FontWeight.bold),
+    );
+  }
+
+  // SỬA: Thay đổi fillColor thành shade200
+  Widget _buildTextField(String label, TextEditingController controller, IconData icon, {bool isNumber = false}) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: TextStyle(color: Colors.grey.shade600, fontSize: 13, fontWeight: FontWeight.w500)),
+        const SizedBox(height: 8),
+        TextFormField(
+          controller: controller,
+          keyboardType: isNumber ? TextInputType.number : TextInputType.text,
+          validator: (val) => val!.isEmpty ? 'Không được để trống' : null,
+          decoration: InputDecoration(
+            prefixIcon: Icon(icon, color: _primaryColor.withOpacity(0.7)),
+            filled: true,
+            // SỬA Ở ĐÂY: Dùng shade200 để đậm hơn, tách biệt với nền trắng
+            fillColor: Colors.grey.shade200, 
+            contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: _primaryColor, width: 1.5)),
+            errorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Colors.red, width: 1)),
+          ),
+        ),
+      ],
+    );
+  }
+
+  // SỬA: Thay đổi fillColor thành shade200
+  Widget _buildDropdown(String label, String currentValue, List<String> items, Function(String?) onChanged) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: TextStyle(color: Colors.grey.shade600, fontSize: 13, fontWeight: FontWeight.w500)),
+        const SizedBox(height: 8),
+        DropdownButtonFormField<String>(
+          value: currentValue,
+          items: items.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
+          onChanged: onChanged,
+          decoration: InputDecoration(
+            prefixIcon: Icon(Icons.sort, color: _primaryColor.withOpacity(0.7)),
+            filled: true,
+            // SỬA Ở ĐÂY: Dùng shade200
+            fillColor: Colors.grey.shade200,
+            contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: _primaryColor, width: 1.5)),
+          ),
+          icon: Icon(Icons.keyboard_arrow_down, color: Colors.grey.shade600),
+          dropdownColor: Colors.white,
+        ),
+      ],
     );
   }
 }
