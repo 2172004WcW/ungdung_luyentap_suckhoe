@@ -3,7 +3,6 @@ import '../models/thuc_pham.dart';
 import '../models/handbook_topic.dart';
 import '../widgets/thuc_pham_card.dart';
 import '../services/handbook_firestore_service.dart';
-// Đảm bảo đường dẫn này đúng với thư mục của bạn
 import 'thuc_pham_detail_screen.dart';
 
 class ThucPhamListScreen extends StatefulWidget {
@@ -107,11 +106,10 @@ class _ThucPhamListScreenState extends State<ThucPhamListScreen> {
                           final item = filteredItems[index];
                           return ThucPhamCard(
                             thucPham: item,
-                            // Nếu là thực phẩm bổ sung thì ẩn chỉ số nhanh,
-                            // nếu là nguyên liệu thì hiện
+
                             showNutrition: !widget.isSupplement,
                             onTap: () {
-                              // Chuyển sang trang mô tả chi tiết (Hình 2 của bạn)
+                              // Chuyển sang trang mô tả chi tiết 
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
