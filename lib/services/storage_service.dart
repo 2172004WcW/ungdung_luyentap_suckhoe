@@ -20,7 +20,6 @@ class StorageService {
   // ================= PROFILE (LOCAL) =================
   static Future<void> saveProfile(UserProfile profile) async {
     final prefs = await _prefs;
-    // Dùng hàm toMap() có sẵn trong Model cho gọn và đồng bộ
     await prefs.setString(_profileKey, jsonEncode(profile.toMap()));
   }
 
@@ -31,8 +30,6 @@ class StorageService {
 
     try {
       final map = jsonDecode(data) as Map<String, dynamic>;
-      // Dùng hàm fromFirestore (hoặc fromJson) để tận dụng logic fallback
-      // Lưu ý: Local storage không có docId riêng biệt như Firestore, ta lấy từ map['id']
       return UserProfile.fromFirestore(map, map['id'] ?? 'local_user');
     } catch (e) {
       print("Lỗi load profile local: $e");
@@ -107,7 +104,6 @@ class StorageService {
     final prefs = await _prefs;
     final logs = await loadNutritionLogs();
     
-    // Xóa log cũ cùng ngày để cập nhật mới
     logs.removeWhere((log) =>
         log.date.year == nutrition.date.year &&
         log.date.month == nutrition.date.month &&
@@ -183,5 +179,81 @@ class StorageService {
   static Future<void> clearAll() async {
     final prefs = await _prefs;
     await prefs.clear();
+  }
+
+  // ================== TÍNH TOÁN THỐNG KÊ (NEW) ==================
+  // Trả về Map gồm: {'calories': int, 'minutes': int, 'streak': int}
+  static Future<Map<String, int>> getHomeStats(String userId) async {
+    try {
+      // 1. Lấy toàn bộ lịch sử tập luyện từ Firebase
+      final sessions = await loadWorkoutSessionsFromFirebase(userId: userId);
+
+      final now = DateTime.now();
+      final today = DateTime(now.year, now.month, now.day); 
+
+      int todayCalories = 0;
+      int todaySeconds = 0;
+      
+      // Dùng Set để lưu các ngày đã tập (tránh trùng lặp) cho việc tính Streak
+      Set<String> uniqueDates = {};
+
+      for (var session in sessions) {
+        DateTime sDate = DateTime(session.date.year, session.date.month, session.date.day);
+        
+        // --- Tính Calo & Thời gian cho HÔM NAY ---
+        if (sDate.isAtSameMomentAs(today)) {
+          todayCalories += (session.caloriesBurned ?? 0);
+          todaySeconds += (session.durationMinutes * 60) + (session.durationSeconds ?? 0);
+        }
+
+        // Lưu ngày vào Set (dạng chuỗi yyyy-MM-dd)
+        uniqueDates.add("${sDate.year}-${sDate.month}-${sDate.day}");
+      }
+
+      // --- TÍNH STREAK (CHUỖI NGÀY) ---
+      int currentStreak = 0;
+      DateTime checkDate = today;
+      String checkString = "${checkDate.year}-${checkDate.month}-${checkDate.day}";
+      
+      // Nếu hôm nay KHÔNG tập, kiểm tra xem hôm qua CÓ tập không?
+      // Nếu hôm qua có tập -> Chuỗi chưa đứt, bắt đầu đếm từ hôm qua.
+      if (!uniqueDates.contains(checkString)) {
+         // Lùi lại 1 ngày (Hôm qua)
+         DateTime yesterday = checkDate.subtract(const Duration(days: 1));
+         String yesterdayString = "${yesterday.year}-${yesterday.month}-${yesterday.day}";
+         
+         if (uniqueDates.contains(yesterdayString)) {
+           checkDate = yesterday; // Bắt đầu đếm từ hôm qua
+         } else {
+           // Cả hôm nay và hôm qua đều không tập -> Mất chuỗi
+           return {
+             'calories': todayCalories,
+             'minutes': (todaySeconds / 60).ceil(),
+             'streak': 0,
+           };
+         }
+      }
+
+      // Vòng lặp đếm ngược quá khứ
+      while (true) {
+        String dateStr = "${checkDate.year}-${checkDate.month}-${checkDate.day}";
+        if (uniqueDates.contains(dateStr)) {
+          currentStreak++;
+          checkDate = checkDate.subtract(const Duration(days: 1));
+        } else {
+          break; // Ngắt chuỗi
+        }
+      }
+
+      return {
+        'calories': todayCalories,
+        'minutes': (todaySeconds / 60).ceil(), // Làm tròn phút
+        'streak': currentStreak,
+      };
+
+    } catch (e) {
+      print("Lỗi tính thống kê: $e");
+      return {'calories': 0, 'minutes': 0, 'streak': 0};
+    }
   }
 }

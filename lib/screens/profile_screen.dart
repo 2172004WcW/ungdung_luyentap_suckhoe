@@ -1,4 +1,3 @@
-// lib/screens/profile_screen.dart
 import 'dart:io';
 import 'package:flutter/material.dart';
 import '../models/user_profile.dart';
@@ -22,8 +21,33 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
-  // Màu chủ đạo
   final Color _primaryColor = const Color(0xFF1AB7B0);
+  
+  // BIẾN LƯU TRỮ THỐNG KÊ
+  int _todayCalories = 0; 
+  int _todayMinutes = 0;
+  int _streak = 0;
+  bool _isLoadingStats = true; 
+
+  @override
+  void initState() {
+    super.initState();
+    _loadRealData(); // Gọi hàm load dữ liệu khi mở màn hình
+  }
+
+  // HÀM LOAD DỮ LIỆU TỪ STORAGE SERVICE
+  Future<void> _loadRealData() async {
+    final stats = await StorageService.getHomeStats(widget.userProfile.id);
+    
+    if (mounted) {
+      setState(() {
+        _todayCalories = stats['calories'] ?? 0;
+        _todayMinutes = stats['minutes'] ?? 0;
+        _streak = stats['streak'] ?? 0;
+        _isLoadingStats = false;
+      });
+    }
+  }
 
   ImageProvider _getAvatarImage(String path) {
     if (path.contains('assets/')) {
@@ -46,7 +70,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
-  // --- HÀM XỬ LÝ ĐĂNG XUẤT ---
   void _handleLogout() async {
     final bool? confirm = await showDialog<bool>(
       context: context,
@@ -104,11 +127,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return Scaffold(
       backgroundColor: Colors.grey.shade100,
       body: SingleChildScrollView(
-        padding: EdgeInsets.zero, // Bỏ padding mặc định để header tràn viền
+        padding: EdgeInsets.zero,
         child: Column(
           children: [
             _buildHeader(),
-            const SizedBox(height: 60), // Khoảng trống bù cho Avatar đè lên
+            const SizedBox(height: 60),
             _buildNameAndGoal(),
             const SizedBox(height: 20),
             _buildStatsCard(),
@@ -123,13 +146,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  // 1. Header cong với background màu và nút Edit
   Widget _buildHeader() {
     return Stack(
-      clipBehavior: Clip.none, // Cho phép avatar tràn ra ngoài
+      clipBehavior: Clip.none,
       alignment: Alignment.center,
       children: [
-        // Background cong
         Container(
           height: 180,
           decoration: BoxDecoration(
@@ -141,7 +162,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
             borderRadius: const BorderRadius.vertical(bottom: Radius.circular(30)),
           ),
         ),
-        // Nút Edit ở góc phải
         Positioned(
           top: 40,
           right: 20,
@@ -157,7 +177,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
           ),
         ),
-        // Avatar nằm đè lên
         Positioned(
           bottom: -50,
           child: Container(
@@ -183,7 +202,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  // 2. Tên và Mục tiêu
   Widget _buildNameAndGoal() {
     return Column(
       children: [
@@ -207,7 +225,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  // 3. Thẻ thống kê (Stats)
+  // THẺ THỐNG KÊ (ĐÃ CẬP NHẬT)
   Widget _buildStatsCard() {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 20),
@@ -226,11 +244,28 @@ class _ProfileScreenState extends State<ProfileScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
-          _buildStatItem('🔥', '1,250', 'Kcal'),
+          // Calo hôm nay
+          _buildStatItem(
+            '🔥', 
+            _isLoadingStats ? '...' : '$_todayCalories', 
+            'Kcal'
+          ),
           Container(height: 40, width: 1, color: Colors.grey.shade200),
-          _buildStatItem('⏱️', '45', 'Phút'),
+          
+          // Phút hôm nay
+          _buildStatItem(
+            '⏱️', 
+            _isLoadingStats ? '...' : '$_todayMinutes', 
+            'Phút'
+          ),
           Container(height: 40, width: 1, color: Colors.grey.shade200),
-          _buildStatItem('📅', '7', 'Ngày'),
+          
+          // Chuỗi ngày (Streak)
+          _buildStatItem(
+            '📅', 
+            _isLoadingStats ? '...' : '$_streak', 
+            'Chuỗi'
+          ),
         ],
       ),
     );
@@ -247,7 +282,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  // 4. Thông tin chỉ số cơ thể
   Widget _buildBodyInfoCard() {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 20),
@@ -297,7 +331,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  // 5. Nút Đăng xuất
   Widget _buildLogoutButton() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
